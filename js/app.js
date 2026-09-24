@@ -1,36 +1,42 @@
 /* ==========================================================================
-   BelPolitCompass · Alpha 0.3 — компас, сайдбар-карта, общие утилиты
+   BelPolitCompass · Alpha 0.4 — компас, сайдбар-карта, общие утилиты
    ========================================================================== */
 (function () {
   'use strict';
 
   const D = window.BPC;
+  const C = window.BPCCore;
+  const T = window.BPCTabs;
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
   const root = document.documentElement;
 
-  /* Режим анимаций задаётся в настройках и уже применён к <html> до отрисовки
-     (см. скрипт в <head>): full — все, reduced — только короткие переходы,
-     off — никаких. Без атрибута действует системная настройка. */
+  /* Режим анимаций уже выставлен на <html> (boot.js): full — все,
+     reduced — только короткие переходы, off — никаких. */
   const mqReduce = window.matchMedia('(prefers-reduced-motion: reduce)');
   const noMotion = () => {
     const m = root.getAttribute('data-motion');
     return m ? m !== 'full' : mqReduce.matches;
   };
+  // На узком экране карточка партии не переворачивается, а плавно сменяет список
+  const mqNarrow = window.matchMedia('(max-width: 900px)');
 
   const parties = D.parties;
   const byId = Object.fromEntries(parties.map((p) => [p.id, p]));
+  const axisById = Object.fromEntries(D.axes.map((a) => [a.id, a]));
 
   /* Цвета партий — CSS-переменные со своими значениями для светлой и тёмной
-     темы. Дальше везде используется var(--p-<id>), поэтому при смене темы
-     перекрашиваются и точки, и диаграммы. Исходный hex остаётся в p.hex. */
+     темы и для палитры дальтоников. Везде дальше используется var(--p-<id>),
+     поэтому точки и диаграммы перекрашиваются вместе с настройками. */
   (function partyColors() {
-    const light = parties.map((p) => `--p-${p.id}:${p.color}`).join(';');
-    const dark = parties.map((p) => `--p-${p.id}:${p.colorDark || p.color}`).join(';');
+    const set = (key) => parties.map((p) => `--p-${p.id}:${p[key] || p.color}`).join(';');
     const css =
-      `:root{${light}}` +
-      `@media (prefers-color-scheme: dark){:root:not([data-theme='light']){${dark}}}` +
-      `:root[data-theme='dark']{${dark}}`;
+      `:root{${set('color')}}` +
+      `@media (prefers-color-scheme: dark){:root:not([data-theme='light']){${set('colorDark')}}}` +
+      `:root[data-theme='dark']{${set('colorDark')}}` +
+      `:root[data-cvd='on']{${set('cvd')}}` +
+      `@media (prefers-color-scheme: dark){:root[data-cvd='on']:not([data-theme='light']){${set('cvdDark')}}}` +
+      `:root[data-cvd='on'][data-theme='dark']{${set('cvdDark')}}`;
     const style = document.createElement('style');
     style.id = 'bpcPartyColors';
     style.textContent = css;
@@ -40,27 +46,16 @@
       p.color = `var(--p-${p.id})`;
     });
   })();
-  const axisById = Object.fromEntries(D.axes.map((a) => [a.id, a]));
 
   /* ---------- Утилиты ---------- */
-  function plural(n, forms) {
-    const a = Math.abs(n) % 100;
-    const b = a % 10;
-    if (a > 10 && a < 20) return forms[2];
-    if (b > 1 && b < 5) return forms[1];
-    if (b === 1) return forms[0];
-    return forms[2];
-  }
-
+  const plural = C.plural;
   const seatWord = (n) => plural(n, ['мандат', 'мандата', 'мандатов']);
-  const fmt = (v) => (v > 0 ? '+' + v : String(v)).replace('-', '−');
+  const fmt = C.fmt;
+  const fmt1 = C.fmt1;
   const isActive = (p) => p.status === 'active';
-
-  function distance(a, b) {
-    return Math.sqrt(D.axes.reduce((s, ax) => s + (a.pos[ax.id] - b.pos[ax.id]) ** 2, 0));
-  }
-  const MAX_DIST = Math.sqrt(D.axes.length * 400);
-  const similarity = (a, b) => Math.round((1 - distance(a, b) / MAX_DIST) * 100);
+  const similarity = (a, b) => C.similarity(a, b, D.axes);
+  // Пояснение для упрощённого режима: всегда в разметке, видно только при data-simple
+  const simple = (text, cls = '') => `<span class="simple simple--inline${cls ? ' ' + cls : ''}">${text}</span>`;
 
   function countUp(el, to, dur = 1400) {
     if (noMotion()) {
@@ -88,29 +83,17 @@
     }
   }
 
-  /* ---------- Навигация ---------- */
+  const smooth = () => (noMotion() ? 'auto' : 'smooth');
+
+  /* ---------- Шапка ---------- */
   const nav = $('#nav');
   const onScroll = () => nav.classList.toggle('is-scrolled', window.scrollY > 8);
   window.addEventListener('scroll', onScroll, { passive: true });
   onScroll();
 
-  const navLinks = $$('.nav__links a');
-  const sectionObs = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((en) => {
-        if (!en.isIntersecting) return;
-        navLinks.forEach((a) => a.classList.toggle('is-current', a.getAttribute('href') === '#' + en.target.id));
-      });
-    },
-    { rootMargin: '-45% 0px -50% 0px' }
-  );
-  $$('main .section').forEach((s) => sectionObs.observe(s));
-  sectionObs.observe($('.hero')); // у hero нет id — подсветка снимается
-
   /* ---------- Анимации появления ----------
-     Весь контент виден сразу (в покое страница полная). Когда блок
-     приближается к экрану (ещё за его нижним краем), он сбрасывается
-     в начальное состояние и проигрывает анимацию появления. */
+     Весь контент виден сразу. Когда блок приближается к экрану (или
+     открывается его вкладка), он на мгновение прячется и плавно въезжает. */
   const approachObs =
     'IntersectionObserver' in window
       ? new IntersectionObserver(
@@ -141,12 +124,10 @@
   }
 
   function observeReveal(scope = document) {
-    $$('.reveal', scope).forEach((el, i) => {
-      if (!el.style.getPropertyValue('--d') && el.parentElement && el.parentElement.classList.contains('hero')) {
-        el.style.setProperty('--d', i * 0.08 + 's');
-      }
-      // Блоки первого экрана прячем сразу, чтобы их появление было частью загрузки
-      if (!noMotion() && approachObs && el.getBoundingClientRect().top < window.innerHeight) el.classList.add('is-prep');
+    $$('.reveal', scope).forEach((el) => {
+      const r = el.getBoundingClientRect();
+      // Блоки открытой вкладки на первом экране прячем сразу — их появление часть загрузки
+      if (!noMotion() && approachObs && r.height && r.top < window.innerHeight) el.classList.add('is-prep');
       onApproach(el, () => replay(el));
     });
   }
@@ -154,11 +135,11 @@
   // Страховка: что бы ни случилось с наблюдателем, через 1,5 с всё видно
   setTimeout(() => $$('.is-prep').forEach((el) => el.classList.remove('is-prep')), 1500);
 
-  /* ---------- Hero ---------- */
+  /* ---------- Главная ---------- */
   $$('[data-updated]').forEach((el) => (el.textContent = D.updated));
   $$('[data-version]').forEach((el) => (el.textContent = D.version));
 
-  /* Мини-компас в первом экране: вектор × власть */
+  /* Мини-компас: вектор × власть */
   (function heroMini() {
     const box = $('#heroPlane');
     if (!box) return;
@@ -182,7 +163,7 @@
           );
           return `<button class="mdot${isActive(p) ? ' is-active' : ''}${crowded ? ' is-lbl-left' : ''}" type="button" data-id="${p.id}"
             style="--c:${p.color};--s:${s}px;left:${pct(p.pos.vector) + shift[i]}%;top:${100 - pct(p.pos.power)}%;--i:${i}"
-            aria-label="${p.name}"><i></i>${isActive(p) ? `<span>${p.abbr}</span>` : ''}<em>${p.short}</em></button>`;
+            aria-label="${p.name}: вектор ${fmt(p.pos.vector)}, власть ${fmt(p.pos.power)}"><i></i>${isActive(p) ? `<span aria-hidden="true">${p.abbr}</span>` : ''}<em aria-hidden="true">${p.short}</em></button>`;
         })
         .join('');
     box.addEventListener('click', (e) => {
@@ -191,39 +172,24 @@
     });
   })();
 
-  /* Полоска парламента под первым экраном: 110 мест */
+  /* Полоска парламента: 110 мест */
   (function heroStrip() {
     const box = $('#heroStrip');
     if (!box) return;
     const P = D.parliament;
     const groups = P.order.map((id) => byId[id]).concat({ short: 'Беспартийные', color: 'var(--np)', seats: P.nonPartisan });
     const cells = groups.map((g) => `<span style="--c:${g.color};flex:${g.seats}"></span>`).join('');
+    const label = groups.map((g) => `${g.short} — ${g.seats}`).join(', ');
     box.innerHTML = `
       <div class="strip__head">
         <b>${P.title}, ${P.convocation}</b>
         <span>${P.total} мест · выборы ${P.elected}</span>
       </div>
-      <div class="strip__bar" role="img" aria-label="Распределение мест">${cells}</div>
+      <div class="strip__bar" role="img" aria-label="Распределение ${P.total} мест: ${label}">${cells}</div>
       <ul class="strip__legend">
         ${groups.map((g) => `<li style="--c:${g.color}"><i></i>${g.short} <b>${g.seats}</b></li>`).join('')}
       </ul>`;
   })();
-
-  /* Мобильное меню */
-  const burger = $('#navBurger');
-  const navEl = $('#nav');
-  function setMenu(open) {
-    navEl.classList.toggle('is-open', open);
-    burger.setAttribute('aria-expanded', String(open));
-  }
-  burger.addEventListener('click', () => setMenu(!navEl.classList.contains('is-open')));
-  $$('#navLinks a').forEach((a) => a.addEventListener('click', () => setMenu(false)));
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') setMenu(false);
-  });
-  document.addEventListener('pointerdown', (e) => {
-    if (!navEl.contains(e.target)) setMenu(false);
-  });
 
   /* ==========================================================================
      Сайдбар: список партий (лицевая сторона)
@@ -236,50 +202,77 @@
       const st = D.statuses[p.status];
       const w = p.seats ? (p.seats / maxSeats) * 100 : 0;
       return `
-      <li class="pcard" tabindex="0" role="button" data-id="${p.id}" data-status="${p.status}"
-          style="--c:${p.color};--i:${i};--w:${w}%" aria-label="${p.name}">
-        <span class="pcard__dot"></span>
-        <div class="pcard__body">
-          <div class="pcard__name">${p.short}${isActive(p) ? '' : `<span class="pcard__status">${st.label}${p.statusYear ? ' ' + p.statusYear : ''}</span>`}</div>
-          <div class="pcard__ideo">${p.ideology}</div>
-        </div>
-        <div class="pcard__seats">
-          <div class="pcard__num">${p.seats}</div>
-          <div class="pcard__unit">${seatWord(p.seats)}</div>
-        </div>
-        <div class="pcard__bar"><i></i></div>
+      <li class="pcard-li" data-id="${p.id}">
+        <button class="pcard" type="button" data-id="${p.id}" data-status="${p.status}" style="--c:${p.color};--i:${i};--w:${w}%">
+          <span class="pcard__dot" aria-hidden="true"></span>
+          <span class="pcard__body">
+            <span class="pcard__name">${p.short}${isActive(p) ? '' : `<span class="pcard__status">${st.label}${p.statusYear ? ' ' + p.statusYear : ''}</span>`}</span>
+            <span class="pcard__ideo">${p.ideology}</span>
+            ${simple(p.plain)}
+          </span>
+          <span class="pcard__seats">
+            <span class="pcard__num">${p.seats}</span>
+            <span class="pcard__unit">${seatWord(p.seats)}</span>
+          </span>
+          <span class="pcard__bar" aria-hidden="true"><i></i></span>
+        </button>
       </li>`;
     })
     .join('');
 
+  const items = $$('.pcard-li', list);
   const cards = $$('.pcard', list);
   cards.forEach((c) => {
     c.addEventListener('click', () => openParty(c.dataset.id));
-    c.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        openParty(c.dataset.id);
-      }
-    });
     c.addEventListener('pointerenter', () => setHover(c.dataset.id));
     c.addEventListener('pointerleave', () => setHover(null));
+    c.addEventListener('focus', () => setHover(c.dataset.id));
+    c.addEventListener('blur', () => setHover(null));
   });
 
-  /* Сегментированный контрол с «глайдером» */
+  /* Сегментированный контрол с «глайдером».
+     Кнопки с role="tab" получают aria-selected, остальные — aria-pressed. */
   function initSeg(seg, onChange) {
     const glider = $('.seg__glider', seg);
+    const btns = () => $$('.seg__btn', seg);
     const move = () => {
       const btn = $('.seg__btn.is-active', seg);
-      if (!btn || !glider) return;
+      if (!btn || !glider || !btn.offsetWidth) return;
       glider.style.width = btn.offsetWidth + 'px';
-      glider.style.transform = `translateX(${btn.offsetLeft}px)`;
+      glider.style.height = btn.offsetHeight + 'px';
+      glider.style.transform = `translate(${btn.offsetLeft}px, ${btn.offsetTop}px)`;
+    };
+    const select = (btn) => {
+      btns().forEach((b) => {
+        const on = b === btn;
+        b.classList.toggle('is-active', on);
+        if (b.getAttribute('role') === 'tab') {
+          b.setAttribute('aria-selected', String(on));
+          b.tabIndex = on ? 0 : -1;
+        } else b.setAttribute('aria-pressed', String(on));
+      });
+      move();
+      onChange(btn);
     };
     seg.addEventListener('click', (e) => {
       const btn = e.target.closest('.seg__btn');
-      if (!btn) return;
-      $$('.seg__btn', seg).forEach((b) => b.classList.toggle('is-active', b === btn));
-      move();
-      onChange(btn);
+      if (btn) select(btn);
+    });
+    // Стрелки внутри вкладок-сегментов
+    seg.addEventListener('keydown', (e) => {
+      const all = btns();
+      const i = all.indexOf(document.activeElement);
+      if (i < 0 || all[i].getAttribute('role') !== 'tab') return;
+      let n = null;
+      if (e.key === 'ArrowRight') n = (i + 1) % all.length;
+      else if (e.key === 'ArrowLeft') n = (i - 1 + all.length) % all.length;
+      else if (e.key === 'Home') n = 0;
+      else if (e.key === 'End') n = all.length - 1;
+      if (n === null) return;
+      e.preventDefault();
+      e.stopPropagation();
+      all[n].focus();
+      select(all[n]);
     });
     window.addEventListener('resize', move);
     requestAnimationFrame(move);
@@ -302,83 +295,127 @@
 
   function applyFilter() {
     let n = 0;
-    cards.forEach((c) => {
-      const ok = passesFilter(byId[c.dataset.id]);
-      c.classList.toggle('is-hidden', !ok);
+    items.forEach((li) => {
+      const ok = passesFilter(byId[li.dataset.id]);
+      li.classList.toggle('is-hidden', !ok);
+      li.setAttribute('aria-hidden', String(!ok));
+      $('.pcard', li).tabIndex = ok ? 0 : -1;
       if (ok) n++;
     });
     countUp(countBadge, n, 500);
+    countBadge.title = `Показано партий: ${n}`;
   }
   countBadge.textContent = parties.length;
 
   /* ==========================================================================
-     Переворот карты (слева направо, как игральная карта)
+     Карточка партии: лицевая сторона — список, оборотная — подробности.
+     В покое видна только одна сторона, без 3D-преобразований: иначе
+     браузеры (особенно на телефонах) не дают прокручивать списки пальцем.
+     3D включается лишь на время анимации переворота.
      ========================================================================== */
   const flip = $('#flip');
   const inner = $('#flipInner');
+  const front = $('#flipFront');
   const detail = $('#partyDetail');
-  let rot = 0;
   let onBack = false;
   let current = null;
-  let turning = null;
+  let flipAnim = null;
 
-  function turn() {
-    const from = rot;
-    rot += 180; // всегда в одну сторону — слева направо
-    onBack = !onBack;
-    inner.style.transform = `rotateY(${rot}deg)`;
-    if (noMotion() || !inner.animate) return;
-    flip.classList.remove('is-turning');
-    void flip.offsetWidth;
-    flip.classList.add('is-turning');
-    clearTimeout(turning);
-    turning = setTimeout(() => flip.classList.remove('is-turning'), 1000);
-    inner.animate(
+  function turn(toBack) {
+    if (flipAnim) flipAnim.finish(); // незавершённый переворот доводим мгновенно
+    const from = toBack ? front : detail;
+    const to = toBack ? detail : front;
+    onBack = toBack;
+    flip.classList.toggle('is-back', toBack);
+    to.hidden = false;
+    if (noMotion() || !inner.animate) {
+      from.hidden = true;
+      return;
+    }
+    if (mqNarrow.matches) {
+      from.hidden = true;
+      flipAnim = to.animate(
+        [
+          { opacity: 0, transform: `translateX(${toBack ? 24 : -24}px)` },
+          { opacity: 1, transform: 'none' },
+        ],
+        { duration: 380, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }
+      );
+      flipAnim.onfinish = () => (flipAnim = null);
+      return;
+    }
+    flip.classList.add('is-3d');
+    const a = toBack ? 0 : 180;
+    flipAnim = inner.animate(
       [
-        { transform: `rotateY(${from}deg) scale(1)` },
-        { transform: `rotateY(${from + 90}deg) scale(0.9) translateZ(-40px)`, offset: 0.5 },
-        { transform: `rotateY(${rot}deg) scale(1)` },
+        { transform: `rotateY(${a}deg)` },
+        { transform: `rotateY(${a + 90}deg) scale(0.92)`, offset: 0.5 },
+        { transform: `rotateY(${a + 180}deg)` },
       ],
-      { duration: 950, easing: 'cubic-bezier(0.65, 0, 0.35, 1)' }
+      { duration: 900, easing: 'cubic-bezier(0.65, 0, 0.35, 1)' }
     );
+    flipAnim.onfinish = () => {
+      flipAnim = null;
+      flip.classList.remove('is-3d');
+      from.hidden = true;
+    };
   }
 
-  function openParty(id, dir) {
+  function openParty(id, dir, opts = {}) {
     const p = byId[id];
     if (!p) return;
+    if (T && !T.isActive('compass')) T.go('#compass', { focus: false });
     const wasOnBack = onBack;
     current = id;
     renderDetail(p, wasOnBack ? dir || 1 : 0);
-    if (!wasOnBack) turn();
+    if (!wasOnBack) turn(true);
     cards.forEach((c) => c.classList.toggle('is-selected', c.dataset.id === id));
     selectDot(id);
-    // На мобильных — показать карточку
-    const r = flip.getBoundingClientRect();
-    if (r.top < 0 || r.top > window.innerHeight * 0.6) {
-      flip.scrollIntoView({ behavior: noMotion() ? 'auto' : 'smooth', block: 'start' });
-    }
+    if (T) T.announce(`Карточка партии «${p.short}»`);
+    // Показать карточку, если она ушла за край экрана
+    requestAnimationFrame(() => {
+      const r = flip.getBoundingClientRect();
+      const navH = nav.getBoundingClientRect().height;
+      if (r.top < navH || r.top > window.innerHeight * 0.6) {
+        window.scrollTo({ top: window.scrollY + r.top - navH - 12, behavior: smooth() });
+      }
+      if (opts.focus !== false) {
+        const h = $('.pd__name', detail);
+        if (h) h.focus({ preventScroll: true });
+      }
+    });
   }
 
   function closeDetail() {
     if (!onBack) return;
-    turn();
+    const was = current;
+    turn(false);
     current = null;
     cards.forEach((c) => c.classList.remove('is-selected'));
     selectDot(null);
+    const c = cards.find((x) => x.dataset.id === was);
+    if (c && c.tabIndex === 0) c.focus({ preventScroll: true });
   }
 
   function step(delta) {
     const visible = parties.filter(passesFilter);
     const pool = visible.length ? visible : parties;
     let i = pool.findIndex((p) => p.id === current);
+    // Текущая партия скрыта фильтром — начинаем с края
+    if (i < 0) i = delta > 0 ? -1 : 0;
     i = (i + delta + pool.length) % pool.length;
     openParty(pool[i].id, delta);
   }
 
+  const campPlain = {
+    gov: 'Провластная — поддерживает нынешнюю власть.',
+    opp: 'Оппозиционная — выступает против нынешней власти.',
+  };
+
   function renderDetail(p, dir) {
     const st = D.statuses[p.status];
     const pool = parties.filter(passesFilter);
-    const idx = Math.max(0, pool.findIndex((x) => x.id === p.id));
+    const idx = pool.findIndex((x) => x.id === p.id);
     const near = parties
       .filter((x) => x.id !== p.id)
       .map((x) => ({ x, s: similarity(p, x) }))
@@ -391,11 +428,12 @@
         return `
         <div class="axisrow">
           <div class="axisrow__top"><span class="axisrow__name">${ax.name}</span><span class="axisrow__val">${fmt(v)}</span></div>
-          <div class="axisrow__track">
+          <div class="axisrow__track" role="img" aria-label="${ax.name}: ${fmt(v)} по шкале от −10 (${ax.neg}) до +10 (${ax.pos})">
             <span class="axisrow__fill" data-v="${v}" style="left:50%;width:0"></span>
             <span class="axisrow__knob" data-v="${v}" style="left:50%"></span>
           </div>
-          <div class="axisrow__poles"><span>${ax.neg}</span><span>${ax.pos}</span></div>
+          <div class="axisrow__poles" aria-hidden="true"><span>${ax.neg}</span><span>${ax.pos}</span></div>
+          ${simple('Партия ' + C.plainPosition(ax, v) + '.')}
         </div>`;
       })
       .join('');
@@ -406,22 +444,25 @@
         <div class="pd__glow"></div>
         <div class="pd__bar">
           <button class="pd__back" type="button" data-act="back">
-            <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>Все партии
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>Все партии
           </button>
-          <span class="pd__pos">${idx + 1} / ${pool.length || parties.length}</span>
+          <button class="tts-btn" type="button" data-tts-read="#partyDetail .pd__content" aria-label="Прочитать карточку вслух" title="Прочитать вслух">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z" stroke-linejoin="round"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" stroke-linecap="round"/></svg>
+          </button>
+          <span class="pd__pos" aria-label="Партия ${idx + 1} из ${pool.length}">${idx < 0 ? '—' : idx + 1} / ${pool.length || parties.length}</span>
           <button class="pd__nav" type="button" data-act="prev" aria-label="Предыдущая партия">
-            <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
           <button class="pd__nav" type="button" data-act="next" aria-label="Следующая партия">
-            <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
         </div>
         <div class="pd__scroll">
           <div class="pd__content${dir ? ' is-swapping' : ''}" style="--dir:${dir < 0 ? '-24px' : '24px'}">
             <div class="pd__hero">
-              <div class="pd__mono">${p.abbr}</div>
+              <div class="pd__mono" aria-hidden="true">${p.abbr}</div>
               <div>
-                <h3 class="pd__name">${p.short}</h3>
+                <h3 class="pd__name" tabindex="-1">${p.short}</h3>
                 <div class="pd__full">${p.name}</div>
               </div>
             </div>
@@ -429,24 +470,34 @@
               <span class="tag tag--${st.tone}">${st.label}${p.statusYear ? ' в ' + p.statusYear : ''}</span>
               <span class="tag tag--${p.camp}">${p.camp === 'gov' ? 'Провластная' : 'Оппозиционная'}</span>
             </div>
+            ${simple(`${st.plain} ${campPlain[p.camp]}`, 'simple--block')}
             <div class="pd__stats">
               <div class="pd__stat"><b>${p.seats}<small> / 110</small></b><span>${seatWord(p.seats)}</span></div>
               <div class="pd__stat"><b>${p.founded}</b><span>${p.foundedNote || 'основана'}</span></div>
               <div class="pd__stat"><b class="sm">${p.leader}</b><span>лидер</span></div>
             </div>
+            ${simple(
+              p.seats
+                ? `У партии ${p.seats} ${seatWord(p.seats)} — ${p.seats} из 110 мест в парламенте. «${p.founded}» — год основания.`
+                : `У партии нет мест в парламенте. «${p.founded}» — год основания.`,
+              'simple--block'
+            )}
             <p class="pd__about">${p.about}</p>
-            <div class="pd__h">Идеология</div>
+            ${simple(p.plain, 'simple--block')}
+            <h4 class="pd__h">Идеология</h4>
             <p class="pd__about">${p.ideology}</p>
-            <div class="pd__h">Позиции на осях</div>
+            ${simple('Идеология — набор главных идей, во что партия верит и чего добивается.', 'simple--block')}
+            <h4 class="pd__h">Позиции на осях</h4>
             ${axes}
-            <div class="pd__h">Ключевые тезисы</div>
+            <h4 class="pd__h">Ключевые тезисы</h4>
             <ul class="pd__points">${p.points.map((t) => `<li>${t}</li>`).join('')}</ul>
-            <div class="pd__h">Ближайшие по взглядам</div>
+            <h4 class="pd__h">Ближайшие по взглядам</h4>
+            ${simple('Партии, чьи взгляды ближе всего к этой. 100% — полное совпадение. Нажмите, чтобы открыть.', 'simple--block')}
             <div class="near">
               ${near
                 .map(
                   (n) =>
-                    `<button class="near__item" type="button" data-go="${n.x.id}" style="--c:${n.x.color}"><i></i>${n.x.short}<span>${n.s}%</span></button>`
+                    `<button class="near__item" type="button" data-go="${n.x.id}" style="--c:${n.x.color}"><i aria-hidden="true"></i>${n.x.short}<span>${n.s}%<span class="sr-only"> сходства</span></span></button>`
                 )
                 .join('')}
             </div>
@@ -466,7 +517,7 @@
           f.style.width = pct + '%';
         });
       },
-      dir ? 80 : 450
+      dir || noMotion() ? 30 : 420
     );
   }
 
@@ -479,24 +530,35 @@
     else if (b.dataset.go) openParty(b.dataset.go, 1);
   });
 
+  // Клавиши работают, только пока открыта вкладка «Компас» и нет диалогов
+  const blocking = () => root.classList.contains('has-sheet') || root.classList.contains('has-tour');
   document.addEventListener('keydown', (e) => {
-    if (!onBack) return;
-    if (e.target.closest('select, input')) return;
+    if (!onBack || blocking() || (T && !T.isActive('compass'))) return;
+    if (e.target.closest && e.target.closest('input, textarea, select, .dd, [role="tablist"], [role="tab"]')) return;
     if (e.key === 'Escape') closeDetail();
-    if (e.key === 'ArrowRight') step(1);
-    if (e.key === 'ArrowLeft') step(-1);
+    else if (e.key === 'ArrowRight') step(1);
+    else if (e.key === 'ArrowLeft') step(-1);
   });
 
-  /* Свайпы по карточке на тач-устройствах */
+  /* Свайпы по карточке на тач-устройствах: только явно горизонтальные */
   let sx = null;
-  detail.addEventListener('touchstart', (e) => (sx = e.touches[0].clientX), { passive: true });
+  let sy = null;
+  detail.addEventListener(
+    'touchstart',
+    (e) => {
+      sx = e.touches[0].clientX;
+      sy = e.touches[0].clientY;
+    },
+    { passive: true }
+  );
   detail.addEventListener(
     'touchend',
     (e) => {
       if (sx === null) return;
       const dx = e.changedTouches[0].clientX - sx;
-      if (Math.abs(dx) > 60) step(dx < 0 ? 1 : -1);
-      sx = null;
+      const dy = e.changedTouches[0].clientY - sy;
+      if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.8) step(dx < 0 ? 1 : -1);
+      sx = sy = null;
     },
     { passive: true }
   );
@@ -515,9 +577,9 @@
 
   /* Кастомный выпадающий список: кнопка + listbox, клавиатура, тема */
   const dropdowns = [];
-  function Dropdown(root, onChange) {
-    const id = root.id;
-    root.insertAdjacentHTML(
+  function Dropdown(el, onChange) {
+    const id = el.id;
+    el.insertAdjacentHTML(
       'beforeend',
       `<button class="dd__btn" type="button" id="${id}Btn" aria-haspopup="listbox" aria-expanded="false"
           aria-controls="${id}List" aria-labelledby="${id}Label ${id}Btn">
@@ -528,7 +590,7 @@
         ${D.axes
           .map(
             (a) => `<li class="dd__opt" role="option" id="${id}-${a.id}" data-v="${a.id}" aria-selected="false">
-              <span class="dd__text"><span class="dd__name">${a.name}</span><span class="dd__poles">${a.neg} ↔ ${a.pos}</span></span>
+              <span class="dd__text"><span class="dd__name">${a.name}</span><span class="dd__poles">${a.neg} ↔ ${a.pos}</span>${simple(a.plain)}</span>
               <span class="dd__hint"></span>
               <svg class="dd__check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </li>`
@@ -536,9 +598,9 @@
           .join('')}
       </ul>`
     );
-    const btn = $('.dd__btn', root);
-    const list = $('.dd__list', root);
-    const opts = $$('.dd__opt', root);
+    const btn = $('.dd__btn', el);
+    const lst = $('.dd__list', el);
+    const opts = $$('.dd__opt', el);
     let val = D.axes[0].id;
     let active = 0;
 
@@ -549,18 +611,24 @@
     function highlight(i) {
       active = (i + opts.length) % opts.length;
       opts.forEach((o, k) => o.classList.toggle('is-active', k === active));
-      list.setAttribute('aria-activedescendant', opts[active].id);
+      lst.setAttribute('aria-activedescendant', opts[active].id);
     }
     function open() {
       dropdowns.forEach((d) => d !== api && d.close());
-      root.classList.add('is-open');
+      el.classList.add('is-open');
       btn.setAttribute('aria-expanded', 'true');
       highlight(opts.findIndex((o) => o.dataset.v === val));
-      list.focus({ preventScroll: true });
+      // Видимость — сразу, без перехода: скрытый элемент не может получить фокус
+      // (при выключенных анимациях переход длится миг, но фокус терялся)
+      lst.style.transitionProperty = 'opacity, transform';
+      lst.style.visibility = 'visible';
+      lst.focus({ preventScroll: true });
     }
     function close(focusBtn) {
-      if (!root.classList.contains('is-open')) return;
-      root.classList.remove('is-open');
+      if (!el.classList.contains('is-open')) return;
+      el.classList.remove('is-open');
+      lst.style.visibility = '';
+      lst.style.transitionProperty = '';
       btn.setAttribute('aria-expanded', 'false');
       if (focusBtn) btn.focus({ preventScroll: true });
     }
@@ -573,14 +641,14 @@
       onChange(v, old);
     }
 
-    btn.addEventListener('click', () => (root.classList.contains('is-open') ? close() : open()));
+    btn.addEventListener('click', () => (el.classList.contains('is-open') ? close() : open()));
     btn.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault();
         open();
       }
     });
-    list.addEventListener('keydown', (e) => {
+    lst.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowDown') highlight(active + 1);
       else if (e.key === 'ArrowUp') highlight(active - 1);
       else if (e.key === 'Home') highlight(0);
@@ -597,7 +665,7 @@
       o.addEventListener('pointermove', () => highlight(i));
     });
     document.addEventListener('pointerdown', (e) => {
-      if (!root.contains(e.target)) close();
+      if (!el.contains(e.target)) close();
     });
 
     const api = {
@@ -645,23 +713,24 @@
     svg.innerHTML = s;
   })();
 
-  // Точки
-  dotsBox.innerHTML = parties
-    .map((p, i) => {
-      const size = 14 + Math.sqrt(p.seats) * 3.2;
-      return `
-      <div class="pdot" data-id="${p.id}" data-status="${p.status}" style="--c:${p.color};--s:${size}px;--i:${i};--x:50;--y:50">
+  // Точки — настоящие кнопки: до них можно дойти клавишей Tab
+  dotsBox.innerHTML =
+    parties
+      .map((p, i) => {
+        const size = 14 + Math.sqrt(p.seats) * 3.2;
+        return `
+      <button class="pdot" type="button" data-id="${p.id}" data-status="${p.status}" style="--c:${p.color};--s:${size}px;--i:${i};--x:50;--y:50">
         <span class="pdot__pulse"></span>
         <span class="pdot__core"></span>
-        <span class="pdot__label">${p.abbr}</span>
-      </div>`;
-    })
-    .join('') +
-    `<div class="pdot pdot--me is-off" data-id="me" data-status="me" style="--c:var(--text);--s:20px;--i:0;--x:50;--y:50">
+        <span class="pdot__label" aria-hidden="true">${p.abbr}</span>
+      </button>`;
+      })
+      .join('') +
+    `<button class="pdot pdot--me is-off" type="button" data-id="me" data-status="me" tabindex="-1" aria-hidden="true" style="--c:var(--text);--s:20px;--i:0;--x:50;--y:50">
         <span class="pdot__pulse"></span>
         <span class="pdot__core"></span>
-        <span class="pdot__label">Вы</span>
-      </div>`;
+        <span class="pdot__label" aria-hidden="true">Вы</span>
+      </button>`;
   const dots = $$('.pdot', dotsBox);
 
   const PAD = 7;
@@ -673,51 +742,28 @@
     const ay = selY.value;
     const vis = parties.filter((p) => isActive(p) || showInactive.checked);
     if (me && toggleMe.checked) vis.push({ id: 'me', pos: me });
-    const pts = vis.map((p) => ({ id: p.id, x: toPct(p.pos[ax]), y: 100 - toPct(p.pos[ay]), ox: 0, oy: 0 }));
-    pts.forEach((p) => {
-      p.ox = p.x;
-      p.oy = p.y;
-    });
-    // Расталкивание: точка + подпись под ней = прямоугольник; перекрытия
-    // разрешаем вдоль оси наименьшего пересечения (смещения — единицы пикселей)
+    const pts = vis.map((p) => ({ id: p.id, x: toPct(p.pos[ax]), y: 100 - toPct(p.pos[ay]) }));
     const size = plane.clientWidth || 500;
-    const k = 100 / size;
     const boxes = pts.map((p) => {
       const el = dots.find((d) => d.dataset.id === p.id);
       const s = parseFloat(el.style.getPropertyValue('--s')) || 16;
       const lw = $('.pdot__label', el).offsetWidth || 40;
-      return { p, w: Math.max(s, lw) + 6, up: s / 2 + 2, down: s / 2 + 26 };
+      const lh = $('.pdot__label', el).offsetHeight || 18;
+      return { p, w: Math.max(s, lw) + 6, up: s / 2 + 2, down: s / 2 + lh + 8 };
     });
-    for (let it = 0; it < 80; it++) {
-      let moved = false;
-      for (let i = 0; i < boxes.length; i++) {
-        for (let j = i + 1; j < boxes.length; j++) {
-          const A = boxes[i];
-          const B = boxes[j];
-          const dx = (B.p.x - A.p.x) / k;
-          const dy = (B.p.y - A.p.y) / k;
-          const ox = (A.w + B.w) / 2 - Math.abs(dx);
-          const oy = dy >= 0 ? A.down + B.up - dy : B.down + A.up + dy;
-          if (ox <= 0 || oy <= 0) continue;
-          moved = true;
-          if (ox < oy) {
-            const sx = (dx >= 0 ? 1 : -1) * (ox / 2 + 0.5) * k;
-            A.p.x -= sx;
-            B.p.x += sx;
-          } else {
-            const sy = (dy >= 0 ? 1 : -1) * (oy / 2 + 0.5) * k;
-            A.p.y -= sy;
-            B.p.y += sy;
-          }
-        }
-      }
-      if (!moved) break;
-    }
+    C.resolveOverlaps(boxes, 100 / size);
     pts.forEach((p) => {
       p.x = Math.max(2, Math.min(98, p.x));
       p.y = Math.max(2, Math.min(94, p.y));
     });
     layout = Object.fromEntries(pts.map((p) => [p.id, p]));
+  }
+
+  function dotLabel(p, ax, ay) {
+    const isMe = p.id === 'me';
+    const name = isMe ? 'Вы, по результату теста' : p.name;
+    const tail = isMe ? 'Нажмите, чтобы открыть тест.' : `${p.seats} ${seatWord(p.seats)}. Открыть карточку.`;
+    return `${name}. ${ax.short} ${fmt1(p.pos[ax.id])}, ${ay.short.toLowerCase()} ${fmt1(p.pos[ay.id])}. ${tail}`;
   }
 
   function renderCompass(animateLabels) {
@@ -728,9 +774,13 @@
     dots.forEach((d) => {
       const pt = layout[d.dataset.id];
       d.classList.toggle('is-off', !pt);
+      d.tabIndex = pt ? 0 : -1;
+      d.setAttribute('aria-hidden', String(!pt));
       if (pt) {
         d.style.setProperty('--x', pt.x);
         d.style.setProperty('--y', pt.y);
+        const p = d.dataset.id === 'me' ? { id: 'me', pos: me } : byId[d.dataset.id];
+        d.setAttribute('aria-label', dotLabel(p, ax, ay));
       }
     });
 
@@ -746,7 +796,7 @@
     };
     Object.entries(labels).forEach(([id, text]) => {
       const el = document.getElementById(id);
-      if (!animateLabels || el.textContent === text) {
+      if (!animateLabels || noMotion() || el.textContent === text) {
         el.textContent = text;
         return;
       }
@@ -757,82 +807,24 @@
       }, 250);
     });
 
+    $('#compassSimple').textContent =
+      `Сейчас слева — «${ax.neg}» (${ax.negPlain}), справа — «${ax.pos}» (${ax.posPlain}). ` +
+      `Внизу — «${ay.neg}» (${ay.negPlain}), вверху — «${ay.pos}» (${ay.posPlain}). ` +
+      'Чем дальше точка от центра, тем твёрже позиция партии.';
+
     renderHulls();
   }
 
   /* ---------- Оболочки лагерей (морфинг) ---------- */
-  const SAMPLES = 72;
   let hullState = { gov: null, opp: null };
   let hullAnim = null;
+  const campHull = (camp) => C.sampledHull(parties.filter((p) => p.camp === camp).map((p) => layout[p.id]).filter(Boolean));
 
-  function convexHull(points) {
-    const pts = points.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
-    if (pts.length < 3) return pts;
-    const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
-    const lower = [];
-    for (const p of pts) {
-      while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop();
-      lower.push(p);
-    }
-    const upper = [];
-    for (let i = pts.length - 1; i >= 0; i--) {
-      const p = pts[i];
-      while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop();
-      upper.push(p);
-    }
-    upper.pop();
-    lower.pop();
-    return lower.concat(upper);
-  }
-
-  // Оболочка с отступом, представленная фиксированным числом лучей — для плавного морфинга
-  function sampledHull(ids) {
-    const pts = ids.map((id) => layout[id]).filter(Boolean);
-    if (!pts.length) return null;
-    const R = 5.5;
-    const cloud = [];
-    pts.forEach((p) => {
-      for (let k = 0; k < 16; k++) {
-        const a = (k / 16) * Math.PI * 2;
-        cloud.push([p.x + Math.cos(a) * R, p.y + Math.sin(a) * R]);
-      }
-    });
-    const hull = convexHull(cloud);
-    const cx = hull.reduce((s, p) => s + p[0], 0) / hull.length;
-    const cy = hull.reduce((s, p) => s + p[1], 0) / hull.length;
-    const out = [];
-    for (let i = 0; i < SAMPLES; i++) {
-      const a = (i / SAMPLES) * Math.PI * 2;
-      const dx = Math.cos(a);
-      const dy = Math.sin(a);
-      let best = 0;
-      for (let j = 0; j < hull.length; j++) {
-        const p1 = hull[j];
-        const p2 = hull[(j + 1) % hull.length];
-        const ex = p2[0] - p1[0];
-        const ey = p2[1] - p1[1];
-        const den = dx * ey - dy * ex;
-        if (Math.abs(den) < 1e-9) continue;
-        const t = ((p1[0] - cx) * ey - (p1[1] - cy) * ex) / den;
-        const u = ((p1[0] - cx) * dy - (p1[1] - cy) * dx) / den;
-        if (t > 0 && u >= -1e-6 && u <= 1 + 1e-6) best = Math.max(best, t);
-      }
-      out.push([cx + dx * best, cy + dy * best]);
-    }
-    return out;
-  }
-
-  const toPath = (pts) =>
-    pts ? 'M' + pts.map((p) => p[0].toFixed(2) + ',' + p[1].toFixed(2)).join('L') + 'Z' : '';
+  const toPath = (pts) => (pts ? 'M' + pts.map((p) => p[0].toFixed(2) + ',' + p[1].toFixed(2)).join('L') + 'Z' : '');
 
   function renderHulls() {
-    const next = {
-      gov: sampledHull(parties.filter((p) => p.camp === 'gov').map((p) => p.id)),
-      opp: sampledHull(parties.filter((p) => p.camp === 'opp').map((p) => p.id)),
-    };
-    if (!hullSvg.firstChild) {
-      hullSvg.innerHTML = '<path class="hull-gov"/><path class="hull-opp"/>';
-    }
+    const next = { gov: campHull('gov'), opp: campHull('opp') };
+    if (!hullSvg.firstChild) hullSvg.innerHTML = '<path class="hull-gov"/><path class="hull-opp"/>';
     const [pg, po] = $$('path', hullSvg);
     const prev = hullState;
     hullState = next;
@@ -875,25 +867,30 @@
   toggleMe.addEventListener('change', () => renderCompass(false));
   showInactive.addEventListener('change', () => renderCompass(false));
 
+  function saveAxes() {
+    storage('bpc-ax', selX.value);
+    storage('bpc-ay', selY.value);
+  }
+
   function onAxisChange(changed, old) {
     // Одну ось нельзя выбрать дважды: вторая ось забирает прежнее значение
     const other = changed === selX ? selY : selX;
     if (other.value === changed.value) other.value = old;
-    storage('bpc-ax', selX.value);
-    storage('bpc-ay', selY.value);
+    saveAxes();
     syncHints();
     renderCompass(true);
+    if (T) T.announce(`По горизонтали: ${axisById[selX.value].name}. По вертикали: ${axisById[selY.value].name}.`);
   }
   $('#swapAxes').addEventListener('click', (e) => {
     const t = selX.value;
     selX.value = selY.value;
     selY.value = t;
-    storage('bpc-ax', selX.value);
-    storage('bpc-ay', selY.value);
+    saveAxes();
     syncHints();
     const icon = e.currentTarget.querySelector('svg');
-    icon.animate && icon.animate([{ transform: 'rotate(0)' }, { transform: 'rotate(180deg)' }], { duration: 500, easing: 'cubic-bezier(0.34,1.56,0.64,1)' });
+    if (icon.animate && !noMotion()) icon.animate([{ transform: 'rotate(0)' }, { transform: 'rotate(180deg)' }], { duration: 500, easing: 'cubic-bezier(0.34,1.56,0.64,1)' });
     renderCompass(true);
+    if (T) T.announce(`Оси поменялись местами. По горизонтали: ${axisById[selX.value].name}.`);
   });
 
   /* ---------- Наведение и выбор ---------- */
@@ -909,8 +906,6 @@
     dotsBox.classList.toggle('has-focus', !!id);
   }
 
-  const fmt1 = (v) => fmt(Math.round(v * 10) / 10).replace('.', ',');
-
   function showTooltip(d) {
     const isMe = d.dataset.id === 'me';
     const p = isMe ? { id: 'me', short: 'Вы (по тесту)', color: 'var(--text)', pos: me } : byId[d.dataset.id];
@@ -925,13 +920,15 @@
       <div class="tt-row"><span>${ay.short}</span><span>${fmt1(p.pos[ay.id])}</span></div>
       ${isMe ? '<div class="tt-row"><span>Нажмите — к результату</span><span></span></div>' : `<div class="tt-row"><span>Мандаты</span><span>${p.seats}</span></div>`}`;
     const w = plane.clientWidth;
+    const half = Math.min(100, w / 2);
     let left = (pt.x / 100) * w;
-    left = Math.max(100, Math.min(w - 100, left));
+    left = Math.max(half, Math.min(w - half, left));
     tooltip.style.left = left + 'px';
     tooltip.style.top = (pt.y / 100) * w + 'px';
     tooltip.classList.toggle('is-below', pt.y < 28);
     tooltip.classList.add('is-on');
   }
+  const hideTooltip = () => tooltip.classList.remove('is-on');
 
   dots.forEach((d) => {
     d.addEventListener('pointerenter', () => {
@@ -940,13 +937,20 @@
     });
     d.addEventListener('pointerleave', () => {
       setHover(null);
-      tooltip.classList.remove('is-on');
+      hideTooltip();
+    });
+    d.addEventListener('focus', () => {
+      setHover(d.dataset.id);
+      showTooltip(d);
+    });
+    d.addEventListener('blur', () => {
+      setHover(null);
+      hideTooltip();
     });
     d.addEventListener('click', () => {
-      tooltip.classList.remove('is-on');
+      hideTooltip();
       if (d.dataset.id === 'me') {
-        const q = $('#quiz');
-        if (q) q.scrollIntoView({ behavior: noMotion() ? 'auto' : 'smooth', block: 'start' });
+        if (T) T.go('#quiz');
       } else {
         openParty(d.dataset.id);
       }
@@ -956,17 +960,23 @@
   let rz;
   const relayout = () => {
     clearTimeout(rz);
-    rz = setTimeout(() => renderCompass(false), 150);
+    rz = setTimeout(() => {
+      if (!T || T.isActive('compass')) renderCompass(false);
+    }, 150);
   };
   window.addEventListener('resize', relayout);
-  // Размер текста меняет ширину подписей — пересчитываем раскладку точек
+  // Размер текста и шрифт меняют ширину подписей — пересчитываем раскладку точек
   document.addEventListener('bpc:settings', relayout);
+  // При смене ширины экрана карточка уходит из «плоского» режима в обычный и обратно
+  const onNarrow = () => {
+    if (flipAnim) flipAnim.finish();
+  };
+  if (mqNarrow.addEventListener) mqNarrow.addEventListener('change', onNarrow);
 
   function resetAxes() {
     selX.value = 'vector';
     selY.value = 'power';
-    storage('bpc-ax', selX.value);
-    storage('bpc-ay', selY.value);
+    saveAxes();
     syncHints();
     renderCompass(true);
   }
@@ -989,12 +999,15 @@
   function showMeOnCompass() {
     if (!me) return;
     toggleMe.checked = true;
-    renderCompass(false);
-    $('#compass').scrollIntoView({ behavior: noMotion() ? 'auto' : 'smooth', block: 'start' });
-    const d = dots.find((x) => x.dataset.id === 'me');
-    d.classList.remove('is-flash');
-    void d.offsetWidth;
-    d.classList.add('is-flash');
+    if (T) T.go('#compass', { focus: false });
+    requestAnimationFrame(() => {
+      renderCompass(false);
+      const d = dots.find((x) => x.dataset.id === 'me');
+      d.classList.remove('is-flash');
+      void d.offsetWidth;
+      d.classList.add('is-flash');
+      d.focus({ preventScroll: true });
+    });
   }
 
   /* Строка для цитирования в разделе «О проекте» */
@@ -1012,16 +1025,40 @@
         const sel = window.getSelection();
         sel.removeAllRanges();
         sel.addRange(range);
-        msg.textContent = 'Выделено — нажмите Ctrl+C';
+        msg.textContent = 'Выделено — скопируйте вручную';
       }
       setTimeout(() => (msg.textContent = ''), 3000);
     });
   }
 
-  /* Публичный API для charts.js, quiz.js, settings.js и tour.js */
-  window.BPCApp = { setMe, showMeOnCompass, resetAxes, closeMenu: () => setMenu(false), storage, axisById, fmt1, onApproach, replay, openParty, setHover, plural, seatWord, fmt, similarity, byId, observeReveal, countUp, initSeg, noMotion,
+  /* Публичный API для charts.js, quiz.js, settings.js, a11y.js и tour.js */
+  window.BPCApp = {
+    setMe,
+    showMeOnCompass,
+    resetAxes,
+    closeDetail,
+    storage,
+    axisById,
+    fmt1,
+    onApproach,
+    replay,
+    openParty,
+    setHover,
+    plural,
+    seatWord,
+    fmt,
+    similarity,
+    byId,
+    observeReveal,
+    countUp,
+    initSeg,
+    noMotion,
+    simple,
     get reduced() {
       return noMotion();
+    },
+    get onBack() {
+      return onBack;
     },
   };
 })();

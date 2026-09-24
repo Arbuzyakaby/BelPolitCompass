@@ -1,5 +1,5 @@
 /* ==========================================================================
-   BelPolitCompass · Alpha 0.3 — тур для новичков
+   BelPolitCompass · Alpha 0.4 — тур для новичков
    При первом визите внизу появляется приглашение. Тур подсвечивает элементы
    «прожектором», который плавно переезжает от шага к шагу, а анимированная
    рука показывает, куда нажимать. Листается кнопками, стрелками ← → и Esc.
@@ -9,6 +9,7 @@
   'use strict';
 
   const A = window.BPCApp;
+  const Tabs = window.BPCTabs;
   const $ = (s, r = document) => r.querySelector(s);
   const KEY = 'bpc-tour'; // 'done' — тур пройден или закрыт, 'later' — «не сейчас»
   const narrow = () => window.innerWidth < 700;
@@ -20,57 +21,72 @@
       text: 'Это карта белорусских партий по четырём линиям спора. За минуту покажем, что где находится и что нажимать. Листайте кнопками или стрелками ← →.',
     },
     {
+      target: '#tabs',
+      hand: '#tab-compass',
+      title: 'Разделы — это вкладки',
+      text: 'Всё на одной странице, но разложено по вкладкам: главная, компас, тест, аналитика, история, оси и описание проекта. На телефоне ленту вкладок можно листать вбок.',
+    },
+    {
+      tab: 'home',
       target: '.hero__cta .btn--primary',
       hand: '.hero__cta .btn--primary',
       title: 'Начните с теста',
       text: '40 коротких утверждений — и вы увидите свою точку рядом с партиями. Ответы остаются только в вашем браузере.',
     },
     {
-      target: () => (narrow() || getComputedStyle($('#navBurger')).display !== 'none' ? '#navBurger' : '#navLinks'),
-      title: 'Разделы сайта',
-      text: 'Меню ведёт к компасу, тесту, диаграммам, истории партий и описанию проекта.',
+      tab: 'home',
+      target: '#easyOffer',
+      hand: '#easyOffer .btn',
+      title: 'Если сложно — простой режим',
+      text: 'Упрощённый режим добавляет пояснение простыми словами к каждой строке: к терминам, диаграммам, вопросам теста и позициям партий.',
     },
     {
+      tab: 'compass',
       target: '.compass-controls',
       hand: '#ddXBtn',
       title: 'Выберите, что сравнивать',
       text: 'Каждая ось — отдельный спор: Восток или Запад, президент или парламент, госсектор или рынок, советская или национальная идентичность. Поставьте любые две.',
     },
     {
+      tab: 'compass',
       target: '#plane',
       hand: '.pdot[data-id="br"] .pdot__core',
       title: 'Точки — это партии',
       text: 'Чем больше точка, тем больше у партии мест в парламенте. Пунктирная обводка — партия больше не действует. Нажмите на точку, чтобы открыть карточку.',
     },
     {
+      tab: 'compass',
       target: '#flip',
       hand: '.pcard[data-id="kpb"] .pcard__name',
       title: 'Список и карточка партии',
-      text: 'Тот же список партий. Нажмите на строку — карточка перевернётся и покажет лидера, тезисы и позиции по всем осям. Листать партии можно стрелками.',
+      text: 'Тот же список партий. Нажмите на строку — откроется карточка: лидер, тезисы и позиции по всем осям. Листать партии можно стрелками.',
     },
     {
+      tab: 'compass',
       target: '.compass-toggles',
       hand: '#toggleInactive + .switch__track',
       title: 'Лишнее можно скрыть',
       text: '«Лагеря» обводят провластные и оппозиционные партии, «Недействующие» прячут ликвидированные. После теста здесь появится переключатель «Моя точка».',
     },
     {
+      tab: 'quiz',
       target: '#quizBox',
       title: 'Тест «Где я на компасе»',
       text: 'Отвечайте в своём темпе: прогресс сохраняется, к вопросу можно вернуться. В конце — профиль по четырём осям и три самые близкие партии.',
     },
     {
+      tab: 'analytics',
       target: '.card--hemi',
       hand: '#hemiLegend .legend__item',
       title: 'Цифры и диаграммы',
-      text: 'Парламент, доли мест, сравнение партий и разрыв между лагерями. Наведите или нажмите на элемент — появятся подробности.',
+      text: 'Парламент, доли мест, сравнение партий и разрыв между лагерями. Под каждой диаграммой — те же данные таблицей.',
     },
     {
-      target: '#settingsBtn',
-      hand: '#settingsBtn',
-      title: 'Настройки',
-      text: 'Тема, размер текста, контрастность, анимации и удаление сохранённых данных. Кнопка «?» рядом снова запустит этот тур.',
-      area: '#helpBtn, #settingsBtn',
+      target: '#a11yBtn',
+      hand: '#a11yBtn',
+      title: 'Настройки и спецвозможности',
+      text: 'Человечек открывает специальные возможности: крупный текст, контраст, озвучивание, линейку для чтения, крупные кнопки. Шестерёнка — все настройки, «?» снова запустит этот тур.',
+      area: '#a11yBtn, #helpBtn, #settingsBtn',
     },
     {
       title: 'Готово!',
@@ -149,6 +165,7 @@
 
   function scrollToTarget(el) {
     if (el.closest('.nav')) return; // шапка липкая — она и так на экране
+    if (el.closest('.tabpanel') && Tabs && el.closest('.tabpanel').id !== Tabs.current) return;
     const r = el.getBoundingClientRect();
     const top = navH() + 12;
     const bottomReserve = narrow() ? pop.offsetHeight + 28 : 24;
@@ -263,10 +280,22 @@
     const my = ++token;
     idx = Math.max(0, Math.min(STEPS.length - 1, i));
     const step = STEPS[idx];
-    const el = step.target ? resolve(step.target) : null;
 
     pop.classList.add('is-switching');
     hand.classList.remove('is-tap');
+
+    // Шаг на другой вкладке — сначала открываем её и ждём, пока она отрисуется
+    if (step.tab && Tabs && !Tabs.isActive(step.tab)) {
+      if (A.onBack && step.tab === 'compass') A.closeDetail();
+      Tabs.go('#' + step.tab, { focus: false, announce: false });
+      requestAnimationFrame(() => requestAnimationFrame(() => my === token && proceed(step, my)));
+    } else {
+      proceed(step, my);
+    }
+  }
+
+  function proceed(step, my) {
+    const el = step.target ? resolve(step.target) : null;
 
     const paint = () => {
       if (my !== token) return;
@@ -296,7 +325,6 @@
     clearTimeout(hideTimer); // тур перезапущен сразу после закрытия — не прятать его
     hideInvite();
     if (window.BPCSettings) window.BPCSettings.close();
-    A.closeMenu();
     opener = document.activeElement;
     active = true;
     tour.hidden = false;
@@ -319,10 +347,9 @@
     document.documentElement.classList.remove('has-tour');
     hideTimer = setTimeout(() => (tour.hidden = true), A.reduced ? 0 : 250);
     if (goQuiz) {
-      const q = $('#quiz');
-      if (q) q.scrollIntoView({ behavior: A.reduced ? 'auto' : 'smooth', block: 'start' });
+      if (Tabs) Tabs.go('#quiz', { focus: false });
       const b = $('#quizBox .btn--primary');
-      if (b) setTimeout(() => b.focus({ preventScroll: true }), 600);
+      if (b) setTimeout(() => b.focus({ preventScroll: true }), A.reduced ? 50 : 400);
     } else if (opener && opener.focus) {
       opener.focus({ preventScroll: true });
     }

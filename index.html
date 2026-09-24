@@ -3,126 +3,140 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>BelPolitCompass</title>
-  <meta name="description" content="Интерактивный политический компас белорусских партий: четыре оси, тест «Где я на компасе», карточки партий, парламент и аналитика." />
+  <title>BelPolitCompass — политический компас Беларуси</title>
+  <meta name="description" content="Интерактивный политический компас белорусских партий: четыре оси, тест «Где я на компасе», карточки партий, парламент и аналитика. Упрощённый режим и специальные возможности." />
   <meta name="theme-color" content="#0e1116" media="(prefers-color-scheme: dark)" />
   <meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)" />
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+  <!-- Настройки и вкладка применяются до отрисовки: без вспышки темы и чужой вкладки -->
+  <script src="js/boot.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/styles.css" />
-  <script>
-    // Настройки применяются до отрисовки, чтобы не было вспышки темы и «прыжка» текста
-    (function () {
-      var r = document.documentElement;
-      var s = {};
-      try {
-        s = JSON.parse(localStorage.getItem('bpc-settings') || '{}') || {};
-        if (!s.theme) s.theme = localStorage.getItem('bpc-theme'); // настройка из Alpha 0.1–0.2
-      } catch (e) {}
-      if (s.theme === 'light' || s.theme === 'dark') r.setAttribute('data-theme', s.theme);
-      if (s.fs === 'lg' || s.fs === 'xl') r.setAttribute('data-fs', s.fs);
-      if (s.contrast === 'high') r.setAttribute('data-contrast', 'high');
-      if (s.hints === false) r.setAttribute('data-hints', 'off');
-      var m = s.motion;
-      if (m !== 'full' && m !== 'reduced' && m !== 'off') {
-        m = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'off' : 'full';
-      }
-      r.setAttribute('data-motion', m);
-    })();
-  </script>
 </head>
 <body>
-  <a class="skip-link" href="#compass">Перейти к компасу</a>
+  <a class="skip-link" href="#main">Перейти к содержимому</a>
+  <div class="sr-only" id="announcer" aria-live="polite" aria-atomic="true"></div>
 
-  <!-- ─────────── Навигация ─────────── -->
+  <!-- ─────────── Шапка и вкладки ─────────── -->
   <header class="nav" id="nav">
     <div class="nav__inner">
-      <a class="brand" href="#top" aria-label="BelPolitCompass — на главную">
+      <a class="brand" href="#home" aria-label="BelPolitCompass — на главную">
         <span class="brand__mark" aria-hidden="true">
           <svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2" opacity=".35"/><path d="M16 5l3.2 11L16 27l-3.2-11z" fill="currentColor"/><circle cx="16" cy="16" r="2.2" fill="var(--bg)"/></svg>
         </span>
         <span class="brand__name">BelPolit<b>Compass</b></span>
       </a>
-      <nav class="nav__links" id="navLinks" aria-label="Разделы">
-        <a href="#compass">Компас</a>
-        <a href="#quiz">Тест</a>
-        <a href="#analytics">Аналитика</a>
-        <a href="#timeline">История</a>
-        <a href="#method">Оси</a>
-        <a href="#about">О проекте</a>
+
+      <nav class="tabs" aria-label="Разделы сайта">
+        <div class="tabs__list" role="tablist" id="tabs" aria-label="Разделы сайта">
+          <a class="tab" role="tab" id="tab-home" href="#home" aria-controls="home">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-6 8 6v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z" stroke-linejoin="round"/></svg><span>Главная</span>
+          </a>
+          <a class="tab" role="tab" id="tab-compass" href="#compass" aria-controls="compass">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z" stroke-linejoin="round"/></svg><span>Компас</span>
+          </a>
+          <a class="tab" role="tab" id="tab-quiz" href="#quiz" aria-controls="quiz">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5V3h6v1.5M9 11l2 2 4-4M9 17h6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Тест</span>
+          </a>
+          <a class="tab" role="tab" id="tab-analytics" href="#analytics" aria-controls="analytics">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V11M11 20V5M17 20v-6M3 20h18" stroke-linecap="round"/></svg><span>Аналитика</span>
+          </a>
+          <a class="tab" role="tab" id="tab-timeline" href="#timeline" aria-controls="timeline">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>История</span>
+          </a>
+          <a class="tab" role="tab" id="tab-method" href="#method" aria-controls="method">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M3 12h18M7 7l-2 5 2 5M17 7l2 5-2 5" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Оси</span>
+          </a>
+          <a class="tab" role="tab" id="tab-about" href="#about" aria-controls="about">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01" stroke-linecap="round"/></svg><span>О проекте</span>
+          </a>
+        </div>
       </nav>
+
       <div class="nav__actions">
-        <span class="pill pill--version" data-version>Alpha 0.3</span>
+        <span class="pill pill--version" data-version>Alpha 0.4</span>
+        <button class="icon-btn" id="a11yBtn" type="button" data-settings-open="a11y" aria-label="Специальные возможности" title="Специальные возможности" aria-haspopup="dialog" aria-controls="settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><circle cx="12" cy="7.2" r="1.3" fill="currentColor" stroke="none"/><path d="M7.5 9.6l4.5 1 4.5-1M12 10.6v3.2l-2.4 4.4M12 13.8l2.4 4.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
         <button class="icon-btn" id="helpBtn" type="button" data-tour-start aria-label="Как пользоваться: короткий тур по сайту" title="Как пользоваться">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.7M12 17h.01" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.7M12 17h.01" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
-        <button class="icon-btn" id="settingsBtn" type="button" aria-label="Настройки" title="Настройки" aria-haspopup="dialog" aria-controls="settings">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" stroke-linejoin="round"/></svg>
-        </button>
-        <button class="icon-btn nav__burger" id="navBurger" type="button" aria-label="Меню" aria-expanded="false" aria-controls="navLinks">
-          <svg viewBox="0 0 24 24"><path d="M4 8h16M4 16h16" stroke-linecap="round"/></svg>
+        <button class="icon-btn" id="settingsBtn" type="button" data-settings-open="main" aria-label="Настройки" title="Настройки" aria-haspopup="dialog" aria-controls="settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" stroke-linejoin="round"/></svg>
         </button>
       </div>
     </div>
   </header>
 
-  <main id="top">
-    <!-- ─────────── Первый экран ─────────── -->
-    <section class="hero">
-      <div class="hero__text">
-        <p class="hero__meta"><span data-version>Alpha 0.3</span> · данные на <span data-updated></span></p>
-        <h1 class="hero__title">Политический компас Беларуси</h1>
-        <p class="hero__lead">
-          Где находятся 14 белорусских партий по четырём главным линиям спора:
-          <b>Восток или Запад</b>, <b>сильный президент или парламент</b>, <b>госсектор или рынок</b>,
-          <b>советская или национальная идентичность</b>.
-        </p>
-        <div class="hero__cta">
-          <a class="btn btn--primary" href="#quiz">Пройти тест <span class="btn__note">~7 минут</span></a>
-          <button class="btn btn--ghost" type="button" data-tour-start>Как пользоваться</button>
-          <a class="link-arrow" href="#compass">Открыть компас <span aria-hidden="true">→</span></a>
+  <main id="main" tabindex="-1">
+    <!-- ─────────── Вкладка «Главная» ─────────── -->
+    <section class="tabpanel" id="home" role="tabpanel" aria-labelledby="tab-home" tabindex="-1">
+      <div class="hero">
+        <div class="hero__text">
+          <p class="hero__meta"><span data-version>Alpha 0.4</span> · данные на <span data-updated></span></p>
+          <h1 class="hero__title">Политический компас Беларуси</h1>
+          <p class="hero__lead">
+            Где находятся 14 белорусских партий по четырём главным линиям спора:
+            <b>Восток или Запад</b>, <b>сильный президент или парламент</b>, <b>госсектор или рынок</b>,
+            <b>советская или национальная идентичность</b>.
+          </p>
+          <p class="simple">Политическая партия — это объединение людей с общими взглядами, которые хотят влиять на то, как управляют страной. Этот сайт показывает, чем взгляды партий отличаются друг от друга, — как карта.</p>
+          <div class="hero__cta">
+            <a class="btn btn--primary" href="#quiz">Пройти тест <span class="btn__note">~7 минут</span></a>
+            <button class="btn btn--ghost" type="button" data-tour-start>Как пользоваться</button>
+            <a class="link-arrow" href="#compass">Открыть компас <span aria-hidden="true">→</span></a>
+          </div>
+          <p class="simple">«Пройти тест» — вы ответите на вопросы, и сайт покажет, какие партии думают похоже на вас. Это бесплатно и анонимно: ответы никуда не отправляются.</p>
+          <div class="easy-offer" id="easyOffer">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1 2V16h5.2v-.2c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z" stroke-linejoin="round"/></svg>
+            <span><b>Сложно разобраться?</b> Упрощённый режим добавит простое пояснение к каждой строке.</span>
+            <button class="btn btn--ghost btn--sm" type="button" data-simple-toggle aria-pressed="false">Включить</button>
+          </div>
         </div>
+
+        <figure class="hero__preview" aria-labelledby="heroCaption">
+          <div class="mini" id="heroMini">
+            <span class="mini__lbl mini__lbl--t">Вертикаль</span>
+            <span class="mini__lbl mini__lbl--b">Горизонталь</span>
+            <span class="mini__lbl mini__lbl--l">Восток</span>
+            <span class="mini__lbl mini__lbl--r">Запад</span>
+            <div class="mini__plane" id="heroPlane"></div>
+          </div>
+          <figcaption class="hero__caption" id="heroCaption">Мини-компас: вектор × модель власти. Нажмите на точку — откроется карточка партии.</figcaption>
+          <p class="simple">Каждая точка — партия. Чем правее точка, тем больше партия за сближение с Европой, чем левее — за союз с Россией. Чем выше — тем больше за сильного президента.</p>
+        </figure>
+
+        <ol class="steps" aria-label="Как это работает">
+          <li>
+            <a class="step" href="#quiz">
+              <span class="step__num">1</span>
+              <span class="step__body"><b>Пройдите тест</b><span>40 утверждений: согласны вы или нет. Ответы остаются в браузере.</span></span>
+            </a>
+          </li>
+          <li>
+            <a class="step" href="#compass">
+              <span class="step__num">2</span>
+              <span class="step__body"><b>Найдите себя на компасе</b><span>Ваша точка «Вы» появится рядом с партиями.</span></span>
+            </a>
+          </li>
+          <li>
+            <a class="step" href="#compass">
+              <span class="step__num">3</span>
+              <span class="step__body"><b>Изучите партии</b><span>Нажмите на партию — откроется карточка с позициями и тезисами.</span></span>
+            </a>
+          </li>
+        </ol>
+        <p class="simple hero__wide">Три шага, с которых удобно начать. Можно идти по порядку или сразу открыть любую вкладку в верхнем меню.</p>
+
+        <div class="hero__strip" id="heroStrip"></div>
+        <p class="simple hero__wide">Парламент — собрание депутатов, которые принимают законы. Цветные полоски показывают, сколько мест у каждой партии. Серая — у беспартийных: эти депутаты не состоят ни в одной партии.</p>
       </div>
-
-      <figure class="hero__preview" aria-label="Мини-компас: геополитический вектор и модель власти">
-        <div class="mini" id="heroMini">
-          <span class="mini__lbl mini__lbl--t">Вертикаль</span>
-          <span class="mini__lbl mini__lbl--b">Горизонталь</span>
-          <span class="mini__lbl mini__lbl--l">Восток</span>
-          <span class="mini__lbl mini__lbl--r">Запад</span>
-          <div class="mini__plane" id="heroPlane"></div>
-        </div>
-        <figcaption class="hero__caption">Вектор × модель власти. Нажмите на точку — откроется карточка партии.</figcaption>
-      </figure>
-
-      <ol class="steps" aria-label="Как это работает">
-        <li>
-          <a class="step" href="#quiz">
-            <span class="step__num">1</span>
-            <span class="step__body"><b>Пройдите тест</b><span>40 утверждений: согласны вы или нет. Ответы остаются в браузере.</span></span>
-          </a>
-        </li>
-        <li>
-          <a class="step" href="#compass">
-            <span class="step__num">2</span>
-            <span class="step__body"><b>Найдите себя на компасе</b><span>Ваша точка «Вы» появится рядом с партиями.</span></span>
-          </a>
-        </li>
-        <li>
-          <a class="step" href="#compass">
-            <span class="step__num">3</span>
-            <span class="step__body"><b>Изучите партии</b><span>Нажмите на партию — откроется карточка с позициями и тезисами.</span></span>
-          </a>
-        </li>
-      </ol>
-
-      <div class="hero__strip" id="heroStrip"></div>
     </section>
 
-    <!-- ─────────── Компас + сайдбар ─────────── -->
-    <section class="section" id="compass">
+    <!-- ─────────── Вкладка «Компас» ─────────── -->
+    <section class="section tabpanel" id="compass" role="tabpanel" aria-labelledby="tab-compass" tabindex="-1">
       <div class="section__head reveal">
         <span class="section__kicker">01 · Компас</span>
         <h2 class="section__title">Кто где стоит</h2>
@@ -131,26 +145,28 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01" stroke-linecap="round"/></svg>
           <span><b>Как читать.</b> Каждая точка — партия. Положение показывает её позицию по двум выбранным осям от −10 до +10, центр — нейтральная позиция. Чем больше точка, тем больше у партии мест в парламенте.</span>
         </p>
+        <p class="simple">Компас — это карта взглядов. Представьте поле: слева одна позиция, справа противоположная, сверху одна, снизу другая. Каждая партия стоит там, где сходятся её взгляды.</p>
       </div>
 
       <div class="workspace">
-        <!-- Сайдбар-карта -->
+        <!-- Сайдбар-карта: лицевая сторона — список, оборотная — карточка партии -->
         <aside class="flip reveal" id="flip" aria-label="Партии">
           <div class="flip__inner" id="flipInner">
-            <div class="flip__face flip__front glass">
+            <div class="flip__face flip__front glass" id="flipFront">
               <div class="sb-head">
-                <div class="sb-head__title">Партии и места в парламенте</div>
+                <h3 class="sb-head__title">Партии и места в парламенте</h3>
                 <span class="count-badge" id="partyCount" title="Показано партий">14</span>
               </div>
-              <div class="seg seg--sm" id="statusFilter" role="tablist" aria-label="Фильтр по статусу">
-                <button class="seg__btn is-active" data-filter="all" role="tab">Все</button>
-                <button class="seg__btn" data-filter="active" role="tab">Действуют</button>
-                <button class="seg__btn" data-filter="inactive" role="tab">Не действуют</button>
-                <span class="seg__glider"></span>
+              <div class="seg seg--sm" id="statusFilter" role="group" aria-label="Фильтр по статусу">
+                <button class="seg__btn is-active" type="button" data-filter="all" aria-pressed="true">Все</button>
+                <button class="seg__btn" type="button" data-filter="active" aria-pressed="false">Действуют</button>
+                <button class="seg__btn" type="button" data-filter="inactive" aria-pressed="false">Не действуют</button>
+                <span class="seg__glider" aria-hidden="true"></span>
               </div>
+              <p class="simple simple--pad">Нажмите на партию — откроется её карточка. Число справа — сколько мест у партии в парламенте (всего мест 110).</p>
               <ul class="party-list" id="partyList"></ul>
             </div>
-            <div class="flip__face flip__back glass" id="partyDetail" aria-live="polite"></div>
+            <div class="flip__face flip__back glass" id="partyDetail" hidden></div>
           </div>
         </aside>
 
@@ -161,34 +177,36 @@
               <span class="dd__label" id="ddXLabel">По горизонтали</span>
             </div>
             <button class="icon-btn icon-btn--sm" id="swapAxes" type="button" aria-label="Поменять оси местами" title="Поменять оси местами">
-              <svg viewBox="0 0 24 24"><path d="M7 7h12l-3-3M17 17H5l3 3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h12l-3-3M17 17H5l3 3" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
             <div class="dd" id="ddY">
               <span class="dd__label" id="ddYLabel">По вертикали</span>
             </div>
-            <div class="compass-toggles" aria-label="Что показывать">
+            <div class="compass-toggles" role="group" aria-label="Что показывать на компасе">
               <label class="switch" title="Обвести провластные и оппозиционные партии"><input type="checkbox" id="toggleHulls" checked /><span class="switch__track"></span>Лагеря</label>
               <label class="switch" title="Показывать ликвидированные и незарегистрированные партии"><input type="checkbox" id="toggleInactive" checked /><span class="switch__track"></span>Недействующие</label>
               <label class="switch" id="meSwitch" hidden title="Ваша точка по результатам теста"><input type="checkbox" id="toggleMe" checked /><span class="switch__track"></span>Моя точка</label>
             </div>
           </div>
+          <p class="simple">«По горизонтали» и «По вертикали» — какие два спора показать на карте. Всего спора четыре, выбрать можно любые два. Кнопка со стрелками меняет их местами. «Лагеря» обводит сторонников власти и оппозицию, «Недействующие» показывает закрытые партии.</p>
 
           <div class="compass" id="compassBox">
             <div class="compass__plane" id="plane">
               <svg class="compass__grid" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" id="grid"></svg>
               <svg class="compass__hulls" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" id="hulls"></svg>
-              <span class="corner corner--tl" id="cTL"></span>
-              <span class="corner corner--tr" id="cTR"></span>
-              <span class="corner corner--bl" id="cBL"></span>
-              <span class="corner corner--br" id="cBR"></span>
-              <div class="dots" id="dots"></div>
-              <div class="tooltip" id="tooltip" role="tooltip"></div>
+              <span class="corner corner--tl" id="cTL" aria-hidden="true"></span>
+              <span class="corner corner--tr" id="cTR" aria-hidden="true"></span>
+              <span class="corner corner--bl" id="cBL" aria-hidden="true"></span>
+              <span class="corner corner--br" id="cBR" aria-hidden="true"></span>
+              <div class="dots" id="dots" role="group" aria-label="Партии на компасе"></div>
+              <div class="tooltip" id="tooltip" role="tooltip" aria-hidden="true"></div>
             </div>
             <div class="axis-label axis-label--top" id="lblTop"></div>
             <div class="axis-label axis-label--bottom" id="lblBottom"></div>
             <div class="axis-label axis-label--left" id="lblLeft"></div>
             <div class="axis-label axis-label--right" id="lblRight"></div>
           </div>
+          <p class="simple" id="compassSimple"></p>
 
           <div class="compass-legend">
             <span><i class="lg lg--gov"></i>Провластные</span>
@@ -197,12 +215,13 @@
             <span class="lg-me" id="legendMe" hidden><i class="lg lg--me"></i>Вы (по тесту)</span>
             <span class="muted">Размер точки — число мест</span>
           </div>
+          <p class="simple">Провластные партии поддерживают нынешнюю власть, оппозиционные — выступают против неё. Точка с пунктирной обводкой — партия закрыта или не зарегистрирована. Большая точка — у партии много мест в парламенте.</p>
         </div>
       </div>
     </section>
 
-    <!-- ─────────── Тест ─────────── -->
-    <section class="section" id="quiz">
+    <!-- ─────────── Вкладка «Тест» ─────────── -->
+    <section class="section tabpanel" id="quiz" role="tabpanel" aria-labelledby="tab-quiz" tabindex="-1">
       <div class="section__head reveal">
         <span class="section__kicker">02 · Тест</span>
         <h2 class="section__title">Где я на компасе?</h2>
@@ -211,20 +230,22 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01" stroke-linecap="round"/></svg>
           <span><b>Как отвечать.</b> Оценивайте каждое утверждение от «полностью согласен» до «полностью не согласен». Не уверены — выбирайте «нейтрально». Прогресс сохраняется, можно вернуться позже.</span>
         </p>
+        <p class="simple">Тест — это не экзамен: правильных ответов нет. Просто отметьте, насколько вы согласны с каждой фразой. В конце сайт покажет, какие партии думают похоже на вас.</p>
       </div>
-      <div class="quiz glass reveal" id="quizBox" aria-live="polite"></div>
+      <div class="quiz glass reveal" id="quizBox"></div>
     </section>
 
-    <!-- ─────────── Аналитика ─────────── -->
-    <section class="section" id="analytics">
+    <!-- ─────────── Вкладка «Аналитика» ─────────── -->
+    <section class="section tabpanel" id="analytics" role="tabpanel" aria-labelledby="tab-analytics" tabindex="-1">
       <div class="section__head reveal">
         <span class="section__kicker">03 · Аналитика</span>
         <h2 class="section__title">Цифры и диаграммы</h2>
         <p class="section__lead">Парламент, распределение мест, сравнение партий и разрыв между лагерями.</p>
         <p class="hint">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01" stroke-linecap="round"/></svg>
-          <span><b>Как читать.</b> Наведите курсор или нажмите на любой элемент диаграммы, чтобы увидеть подробности. Нажатие на партию открывает её карточку на компасе.</span>
+          <span><b>Как читать.</b> Наведите курсор или нажмите на любой элемент диаграммы, чтобы увидеть подробности. Нажатие на партию открывает её карточку на компасе. Под каждой диаграммой есть те же данные таблицей.</span>
         </p>
+        <p class="simple">Здесь те же данные, но в виде картинок: сколько мест у партий и насколько партии похожи друг на друга.</p>
       </div>
 
       <div class="bento">
@@ -235,6 +256,7 @@
               <p class="card__sub">VIII созыв · избрана 25 февраля 2024 · 110 мест</p>
             </div>
           </header>
+          <p class="simple">Каждый кружок — одно место в парламенте, всего 110. Цвет показывает, чьё это место. Нажмите на название партии ниже, чтобы подсветить её места.</p>
           <div class="hemi" id="hemicycle"></div>
           <div class="legend" id="hemiLegend"></div>
         </article>
@@ -246,10 +268,11 @@
               <p class="card__sub">Партийные и беспартийные депутаты</p>
             </div>
           </header>
+          <p class="simple">Круг поделён на части: чем больше часть, тем больше мест. Процент — доля от всех 110 мест.</p>
           <div class="donut" id="donut"></div>
         </article>
 
-        <article class="card glass card--stats reveal" id="statCards"></article>
+        <article class="card glass card--stats reveal" id="statCards" aria-label="Ключевые цифры"></article>
 
         <article class="card glass card--bars reveal">
           <header class="card__head card__head--wrap">
@@ -257,9 +280,10 @@
               <h3 class="card__title">Рейтинг по оси</h3>
               <p class="card__sub" id="barsSub"></p>
             </div>
-            <div class="seg seg--sm" id="barsTabs" role="tablist" aria-label="Ось рейтинга"><span class="seg__glider"></span></div>
+            <div class="seg seg--sm seg--wrap" id="barsTabs" role="tablist" aria-label="Ось рейтинга"><span class="seg__glider" aria-hidden="true"></span></div>
           </header>
-          <div class="dbars" id="dbars"></div>
+          <p class="simple">Полоска показывает позицию партии: влево — к одному ответу, вправо — к другому, от центра — насколько твёрдо. Кнопками сверху можно выбрать другой спор.</p>
+          <div class="dbars" id="dbars" role="tabpanel" aria-labelledby="barsSub"></div>
         </article>
 
         <article class="card glass card--radar reveal">
@@ -269,8 +293,9 @@
               <p class="card__sub">Выберите до трёх партий</p>
             </div>
           </header>
+          <p class="simple">Каждая цветная фигура — одна партия. Чем дальше угол фигуры от центра, тем сильнее партия за подписанный ответ (например, «Запад»). Выберите до трёх партий кнопками снизу.</p>
           <div class="radar" id="radar"></div>
-          <div class="chips" id="radarChips"></div>
+          <div class="chips" id="radarChips" role="group" aria-label="Партии для сравнения"></div>
         </article>
 
         <article class="card glass card--gap reveal">
@@ -280,6 +305,7 @@
               <p class="card__sub">Средние позиции провластных и оппозиционных партий</p>
             </div>
           </header>
+          <p class="simple">На каждой линии две точки: «средняя» провластная партия и «средняя» оппозиционная. Чем дальше точки друг от друга, тем сильнее лагеря спорят об этом.</p>
           <div class="gap" id="gap"></div>
         </article>
 
@@ -290,13 +316,14 @@
               <p class="card__sub">Чем насыщеннее клетка, тем ближе партии по всем четырём осям</p>
             </div>
           </header>
-          <div class="matrix-wrap"><div class="matrix" id="matrix"></div></div>
+          <p class="simple">Таблица сравнивает каждую партию с каждой. Тёмная клетка — партии похожи, светлая — сильно различаются. Нажмите на клетку, чтобы увидеть процент сходства.</p>
+          <div class="matrix-wrap" tabindex="0" role="region" aria-label="Матрица близости, прокручивается вбок"><div class="matrix" id="matrix"></div></div>
         </article>
       </div>
     </section>
 
-    <!-- ─────────── Хронология ─────────── -->
-    <section class="section" id="timeline">
+    <!-- ─────────── Вкладка «История» ─────────── -->
+    <section class="section tabpanel" id="timeline" role="tabpanel" aria-labelledby="tab-timeline" tabindex="-1">
       <div class="section__head reveal">
         <span class="section__kicker">04 · История</span>
         <h2 class="section__title">Как менялась партийная система</h2>
@@ -304,22 +331,27 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01" stroke-linecap="round"/></svg>
           <span><b>Цвет метки.</b> <i class="tone tone--gov"></i>синий — события, связанные с властью, <i class="tone tone--opp"></i>охра — с оппозицией, <i class="tone tone--np"></i>серый — общие для страны.</span>
         </p>
+        <p class="simple">Лента событий с 1988 года: как появлялись, объединялись и закрывались партии. Читайте сверху вниз — от старых событий к новым.</p>
       </div>
-      <ol class="tl" id="tl"><span class="tl__line"><span class="tl__fill" id="tlFill"></span></span></ol>
+      <div class="tl-wrap">
+        <span class="tl__line" aria-hidden="true"><span class="tl__fill" id="tlFill"></span></span>
+        <ol class="tl" id="tl"></ol>
+      </div>
     </section>
 
-    <!-- ─────────── Методология ─────────── -->
-    <section class="section" id="method">
+    <!-- ─────────── Вкладка «Оси» ─────────── -->
+    <section class="section tabpanel" id="method" role="tabpanel" aria-labelledby="tab-method" tabindex="-1">
       <div class="section__head reveal">
         <span class="section__kicker">05 · Оси</span>
         <h2 class="section__title">Почему именно эти оси</h2>
         <p class="section__lead">Классический компас «лево-право × авторитаризм-либертарианство» плохо описывает Беларусь: здесь линии раскола проходят иначе.</p>
+        <p class="simple">Ось — это один большой вопрос, о котором спорят партии. −10 значит «полностью за первый ответ», +10 — «полностью за второй», 0 — посередине.</p>
       </div>
       <div class="method" id="methodGrid"></div>
     </section>
 
-    <!-- ─────────── О проекте ─────────── -->
-    <section class="section" id="about">
+    <!-- ─────────── Вкладка «О проекте» ─────────── -->
+    <section class="section tabpanel" id="about" role="tabpanel" aria-labelledby="tab-about" tabindex="-1">
       <div class="section__head reveal">
         <span class="section__kicker">06 · О проекте</span>
         <h2 class="section__title">Что такое BelPolitCompass</h2>
@@ -327,18 +359,60 @@
           Открытый образовательный проект: карта белорусской политики, на которой можно сравнить партии между собой
           и найти на ней себя. Без агитации, регистрации и сбора данных.
         </p>
+        <p class="simple">Здесь рассказано, зачем сделан сайт, как он работает и откуда взяты данные. Можно читать по порядку или выбрать тему в содержании.</p>
       </div>
 
       <dl class="facts reveal" aria-label="Проект в цифрах">
-        <div><dt>Партий</dt><dd>14</dd><span>4 действующие и 10 ликвидированных или незарегистрированных</span></div>
-        <div><dt>Осей</dt><dd>4</dd><span>вектор, модель власти, экономика, идентичность</span></div>
-        <div><dt>Вопросов</dt><dd>40</dd><span>по 10 на ось, половина — в пользу каждого полюса</span></div>
-        <div><dt>Данных на сервер</dt><dd>0</dd><span>ответы и настройки хранятся только в браузере</span></div>
+        <div><dt>Партий</dt><dd>14</dd><dd class="facts__note">4 действующие и 10 ликвидированных или незарегистрированных</dd></div>
+        <div><dt>Осей</dt><dd>4</dd><dd class="facts__note">вектор, модель власти, экономика, идентичность</dd></div>
+        <div><dt>Вопросов</dt><dd>40</dd><dd class="facts__note">по 10 на ось, половина — в пользу каждого полюса</dd></div>
+        <div><dt>Данных на сервер</dt><dd>0</dd><dd class="facts__note">ответы и настройки хранятся только в браузере</dd></div>
       </dl>
 
       <div class="about">
+        <!-- Содержание: на компьютере — липкая колонка, на телефоне — раскрывающаяся панель -->
+        <nav class="toc" id="toc" aria-label="Содержание раздела «О проекте»">
+          <details class="toc__box" id="tocBox">
+            <summary class="toc__summary">
+              <span class="toc__label">Содержание</span>
+              <span class="toc__current" id="tocCurrent" aria-live="off">Зачем он нужен</span>
+              <span class="toc__meter" aria-hidden="true"><i id="tocMeter"></i></span>
+              <svg class="toc__chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </summary>
+            <div class="toc__body">
+              <p class="toc__group">О проекте</p>
+              <ol class="toc__list" start="1">
+                <li><a href="#about-why"><span class="toc__num">01</span><span class="toc__text">Зачем он нужен</span></a></li>
+                <li><a href="#about-who"><span class="toc__num">02</span><span class="toc__text">Для кого</span></a></li>
+                <li><a href="#about-how"><span class="toc__num">03</span><span class="toc__text">Как пользоваться</span></a></li>
+              </ol>
+              <p class="toc__group">Методика</p>
+              <ol class="toc__list" start="4">
+                <li><a href="#about-method"><span class="toc__num">04</span><span class="toc__text">Как оцениваются партии</span></a></li>
+                <li><a href="#about-sim"><span class="toc__num">05</span><span class="toc__text">Как считается сходство</span></a></li>
+                <li><a href="#about-quiz"><span class="toc__num">06</span><span class="toc__text">Как устроен тест</span></a></li>
+                <li><a href="#about-limits"><span class="toc__num">07</span><span class="toc__text">Ограничения</span></a></li>
+                <li><a href="#about-principles"><span class="toc__num">08</span><span class="toc__text">Принципы</span></a></li>
+              </ol>
+              <p class="toc__group">Справка</p>
+              <ol class="toc__list" start="9">
+                <li><a href="#faq"><span class="toc__num">09</span><span class="toc__text">Частые вопросы</span></a></li>
+                <li><a href="#glossary"><span class="toc__num">10</span><span class="toc__text">Словарь</span></a></li>
+                <li><a href="#about-a11y"><span class="toc__num">11</span><span class="toc__text">Доступность</span></a></li>
+              </ol>
+              <p class="toc__group">Проект</p>
+              <ol class="toc__list" start="12">
+                <li><a href="#versions"><span class="toc__num">12</span><span class="toc__text">Версии</span></a></li>
+                <li><a href="#sources"><span class="toc__num">13</span><span class="toc__text">Источники</span></a></li>
+                <li><a href="#cite"><span class="toc__num">14</span><span class="toc__text">Как цитировать</span></a></li>
+                <li><a href="#about-help"><span class="toc__num">15</span><span class="toc__text">Как помочь проекту</span></a></li>
+              </ol>
+            </div>
+          </details>
+        </nav>
+
         <div class="about__main">
-          <article class="about__block reveal" id="about-why">
+          <article class="about__block reveal" id="about-why" data-num="01">
             <h3>Зачем он нужен</h3>
             <p>
               О белорусских партиях обычно говорят одним словом: «провластная» или «оппозиционная». За этим теряются различия
@@ -346,9 +420,10 @@
               противоположности по вопросу рынка. Компас показывает эти различия наглядно и позволяет спорить о фактах,
               а не о ярлыках.
             </p>
+            <p class="simple">Одних партий называют «за власть», других — «против». Но внутри каждой группы партии тоже очень разные. Сайт показывает эти различия.</p>
           </article>
 
-          <article class="about__block reveal" id="about-who">
+          <article class="about__block reveal" id="about-who" data-num="02">
             <h3>Для кого</h3>
             <ul class="audience">
               <li><b>Для тех, кто хочет разобраться</b><span>Быстрый способ понять, чем партии отличаются друг от друга и где вы сами.</span></li>
@@ -357,7 +432,7 @@
             </ul>
           </article>
 
-          <article class="about__block reveal" id="about-how">
+          <article class="about__block reveal" id="about-how" data-num="03">
             <h3>Как пользоваться</h3>
             <ol class="howto">
               <li><b>Пройдите тест</b> — 40 утверждений, около семи минут. Прогресс сохраняется автоматически.</li>
@@ -368,7 +443,7 @@
             <button class="btn btn--ghost btn--sm" type="button" data-tour-start>Показать тур по сайту</button>
           </article>
 
-          <article class="about__block reveal" id="about-method">
+          <article class="about__block reveal" id="about-method" data-num="04">
             <h3>Как оцениваются партии</h3>
             <p>
               Каждая партия получает координату от −10 до +10 по каждой из четырёх осей. Оценка опирается на программы
@@ -376,28 +451,32 @@
               Для ликвидированных партий используется их последняя программа и позиция на момент ликвидации.
               Это экспертная оценка, а не позиция самих партий, и её можно оспорить.
             </p>
-            <table class="scale">
-              <caption>Как читать координату</caption>
-              <thead><tr><th scope="col">Значение</th><th scope="col">Что значит</th></tr></thead>
-              <tbody>
-                <tr><td>0</td><td>Нейтральная или смешанная позиция</td></tr>
-                <tr><td>±1…4</td><td>Умеренный наклон к одному из полюсов</td></tr>
-                <tr><td>±5…7</td><td>Заметная, последовательная позиция</td></tr>
-                <tr><td>±8…10</td><td>Твёрдая позиция, одна из ключевых для партии</td></tr>
-              </tbody>
-            </table>
+            <p class="simple">Каждой партии поставили оценку по каждому спору — от −10 до +10, как оценку в школе, только с минусом. Оценку ставили по тому, что партия говорит и делает.</p>
+            <div class="table-wrap">
+              <table class="scale">
+                <caption>Как читать координату</caption>
+                <thead><tr><th scope="col">Значение</th><th scope="col">Что значит</th></tr></thead>
+                <tbody>
+                  <tr><td>0</td><td>Нейтральная или смешанная позиция</td></tr>
+                  <tr><td>±1…4</td><td>Умеренный наклон к одному из полюсов</td></tr>
+                  <tr><td>±5…7</td><td>Заметная, последовательная позиция</td></tr>
+                  <tr><td>±8…10</td><td>Твёрдая позиция, одна из ключевых для партии</td></tr>
+                </tbody>
+              </table>
+            </div>
           </article>
 
-          <article class="about__block reveal" id="about-sim">
+          <article class="about__block reveal" id="about-sim" data-num="05">
             <h3>Как считается сходство</h3>
             <p>
               Партии и ваш результат — это точки в четырёхмерном пространстве. Сходство — это расстояние между точками,
               переведённое в проценты: 100% — полное совпадение по всем осям, 0% — противоположные углы.
             </p>
             <p class="formula"><code>сходство = 100% × (1 − d / d<sub>max</sub>)</code>, где <code>d</code> — обычное (евклидово) расстояние по четырём осям, а <code>d<sub>max</sub> = 40</code>.</p>
+            <p class="simple">Чем ближе две точки на карте, тем выше процент. 100% — взгляды совпадают полностью, 0% — полностью противоположны.</p>
           </article>
 
-          <article class="about__block reveal" id="about-quiz">
+          <article class="about__block reveal" id="about-quiz" data-num="06">
             <h3>Как устроен тест</h3>
             <p>
               40 утверждений, по 10 на ось. На каждой оси половина утверждений сформулирована в пользу одного полюса,
@@ -405,9 +484,10 @@
               сумма по оси делится на максимум и переводится в ту же шкалу −10…+10, что и позиции партий, поэтому их
               можно сравнивать напрямую. Пропущенный вопрос считается нейтральным ответом.
             </p>
+            <p class="simple">Каждый ответ немного сдвигает вашу точку. Половина вопросов сдвигает в одну сторону, половина — в другую, чтобы результат был честным.</p>
           </article>
 
-          <article class="about__block reveal" id="about-limits">
+          <article class="about__block reveal" id="about-limits" data-num="07">
             <h3>Ограничения</h3>
             <ul class="limits">
               <li>Четыре оси — упрощение: они не описывают всех тем, например отношение к религии или экологии.</li>
@@ -417,26 +497,29 @@
             </ul>
           </article>
 
-          <div class="principles reveal">
-            <div class="principle">
-              <b>Нейтральность</b>
-              <span>Проект не агитирует ни за одну политическую силу и одинаково описывает все партии.</span>
+          <article class="about__block reveal" id="about-principles" data-num="08">
+            <h3>Принципы</h3>
+            <div class="principles">
+              <div class="principle">
+                <b>Нейтральность</b>
+                <span>Проект не агитирует ни за одну политическую силу и одинаково описывает все партии.</span>
+              </div>
+              <div class="principle">
+                <b>Открытость</b>
+                <span>Весь код и все оценки лежат в открытом репозитории. Любую координату можно проверить.</span>
+              </div>
+              <div class="principle">
+                <b>Приватность</b>
+                <span>Ответы теста никуда не отправляются: они хранятся только в вашем браузере.</span>
+              </div>
+              <div class="principle">
+                <b>Доступность</b>
+                <span>Сайт работает с клавиатуры и экранным диктором, есть упрощённый режим и специальные возможности.</span>
+              </div>
             </div>
-            <div class="principle">
-              <b>Открытость</b>
-              <span>Весь код и все оценки лежат в открытом репозитории. Любую координату можно проверить.</span>
-            </div>
-            <div class="principle">
-              <b>Приватность</b>
-              <span>Ответы теста никуда не отправляются: они хранятся только в вашем браузере.</span>
-            </div>
-            <div class="principle">
-              <b>Проверяемость</b>
-              <span>Методика описана полностью: формулы, шкалы и источники можно воспроизвести.</span>
-            </div>
-          </div>
+          </article>
 
-          <div class="faq reveal" id="faq">
+          <article class="about__block faq reveal" id="faq" data-num="09">
             <h3>Частые вопросы</h3>
             <details>
               <summary>Почему не классические «лево-право»?</summary>
@@ -467,6 +550,14 @@
               </p>
             </details>
             <details>
+              <summary>Что такое упрощённый режим?</summary>
+              <p>
+                Режим для тех, кто впервые сталкивается с политикой: к каждой строке, диаграмме, вопросу теста и партии
+                добавляется короткое пояснение простыми словами. Включается в настройках или кнопкой «Включить»
+                на главной вкладке.
+              </p>
+            </details>
+            <details>
               <summary>Я не согласен с позицией партии. Что делать?</summary>
               <p>
                 Откройте обсуждение (issue) в репозитории проекта на GitHub и укажите, на чём основано ваше мнение:
@@ -477,7 +568,7 @@
               <summary>Сохраняются ли мои ответы?</summary>
               <p>
                 Только в вашем браузере (localStorage), чтобы можно было продолжить тест позже. На сервер ничего не
-                отправляется. Удалить ответы можно в настройках: «Данные и тур» → «Удалить ответы теста».
+                отправляется. Удалить ответы можно в настройках: вкладка «Данные» → «Удалить ответы теста».
               </p>
             </details>
             <details>
@@ -490,13 +581,13 @@
             <details>
               <summary>Можно ли использовать компас в учёбе или в статье?</summary>
               <p>
-                Да, проект открытый. Пожалуйста, указывайте источник и версию — готовая строка для цитирования есть справа
-                (или ниже на телефоне).
+                Да, проект открытый. Пожалуйста, указывайте источник и версию — готовая строка для цитирования есть
+                в пункте «Как цитировать».
               </p>
             </details>
-          </div>
+          </article>
 
-          <div class="glossary reveal">
+          <article class="about__block glossary reveal" id="glossary" data-num="10">
             <h3>Словарь</h3>
             <dl>
               <div><dt>Палата представителей</dt><dd>Нижняя палата парламента Беларуси, 110 депутатов.</dd></div>
@@ -505,67 +596,74 @@
               <div><dt>Союзное государство</dt><dd>Интеграционное объединение Беларуси и России, созданное в 1999 году.</dd></div>
               <div><dt>ЕАЭС, ОДКБ</dt><dd>Евразийский экономический союз и Организация Договора о коллективной безопасности.</dd></div>
               <div><dt>ВКЛ, БНР</dt><dd>Великое княжество Литовское и Белорусская Народная Республика 1918 года.</dd></div>
+              <div><dt>Мандат</dt><dd>Место депутата в парламенте. Сколько мандатов у партии — столько у неё депутатов.</dd></div>
+              <div><dt>Беспартийный</dt><dd>Депутат, который не состоит ни в одной партии.</dd></div>
             </dl>
+          </article>
+
+          <article class="about__block reveal" id="about-a11y" data-num="11">
+            <h3>Доступность</h3>
+            <p>
+              Сайт можно пройти целиком с клавиатуры, у всех кнопок и точек есть понятные подписи для экранного диктора,
+              у каждой диаграммы — таблица с теми же данными. В настройках есть раздел «Специальные возможности»:
+              готовые профили (слабое зрение, дислексия, моторика, экранный диктор, без движения), максимальный контраст,
+              удобочитаемый шрифт, увеличенные интервалы, крупный курсор, линейка для чтения, озвучивание текста,
+              крупные кнопки и палитра для дальтоников.
+            </p>
+            <button class="btn btn--ghost btn--sm" type="button" data-settings-open="a11y">Открыть специальные возможности</button>
+          </article>
+
+          <div class="about__cards">
+            <article class="about__card glass reveal" id="versions" data-num="12">
+              <h3>Версии</h3>
+              <ol class="versions">
+                <li class="is-current">
+                  <b>Alpha 0.4</b>
+                  <span>Вкладки вместо длинной ленты, упрощённый режим, специальные возможности, исправлена прокрутка на телефонах, автотесты.</span>
+                </li>
+                <li>
+                  <b>Alpha 0.3</b>
+                  <span>Строгий аналитический дизайн, настройки, тур для новичков, расширенный раздел «О проекте».</span>
+                </li>
+                <li>
+                  <b>Alpha 0.2</b>
+                  <span>Тест «Где я на компасе», раздел «О проекте», новые выпадающие списки.</span>
+                </li>
+                <li>
+                  <b>Alpha 0.1</b>
+                  <span>Компас с четырьмя осями, 14 партий, карточки, аналитика, хронология.</span>
+                </li>
+                <li class="is-next">
+                  <b>Дальше</b>
+                  <span>Белорусскоязычная версия, короткий тест, история позиций партий по годам.</span>
+                </li>
+              </ol>
+            </article>
+            <article class="about__card glass reveal" id="sources" data-num="13">
+              <h3>Источники</h3>
+              <ul class="sources">
+                <li>Итоги выборов в Палату представителей, 2024</li>
+                <li>Программы и официальные сайты партий</li>
+                <li>Публичные заявления лидеров партий</li>
+                <li>Закон «О политических партиях» в редакции 2023 года</li>
+              </ul>
+              <a class="link-arrow" href="https://github.com/Arbuzyakaby/BelPolitCompass" target="_blank" rel="noopener">Код на GitHub <span aria-hidden="true">↗</span></a>
+            </article>
+            <article class="about__card glass reveal" id="cite" data-num="14">
+              <h3>Как цитировать</h3>
+              <p class="cite" id="citeText">BelPolitCompass — политический компас Беларуси, <span data-version>Alpha 0.4</span>, данные на <span data-updated></span>.<br />https://github.com/Arbuzyakaby/BelPolitCompass</p>
+              <button class="btn btn--ghost btn--sm" type="button" id="citeCopy">Скопировать</button>
+              <span class="cite__msg" id="citeMsg" role="status"></span>
+            </article>
+            <article class="about__card glass reveal" id="about-help" data-num="15">
+              <h3>Как помочь проекту</h3>
+              <p class="about__small">
+                Нашли ошибку в оценке или опечатку — откройте issue на GitHub. Умеете программировать — присылайте pull request:
+                все данные лежат в одном файле <code>js/data.js</code>, а автотесты проверят, что ничего не сломалось.
+              </p>
+            </article>
           </div>
         </div>
-
-        <aside class="about__side reveal">
-          <nav class="about__card glass about__toc" aria-label="Содержание раздела">
-            <h3>Содержание</h3>
-            <a href="#about-why">Зачем он нужен</a>
-            <a href="#about-who">Для кого</a>
-            <a href="#about-how">Как пользоваться</a>
-            <a href="#about-method">Как оцениваются партии</a>
-            <a href="#about-sim">Как считается сходство</a>
-            <a href="#about-quiz">Как устроен тест</a>
-            <a href="#about-limits">Ограничения</a>
-            <a href="#faq">Частые вопросы</a>
-          </nav>
-          <div class="about__card glass">
-            <h3>Версии</h3>
-            <ol class="versions" id="versions">
-              <li class="is-current">
-                <b>Alpha 0.3</b>
-                <span>Строгий аналитический дизайн, настройки, тур для новичков, расширенный раздел «О проекте».</span>
-              </li>
-              <li>
-                <b>Alpha 0.2</b>
-                <span>Тест «Где я на компасе», раздел «О проекте», новые выпадающие списки.</span>
-              </li>
-              <li>
-                <b>Alpha 0.1</b>
-                <span>Компас с четырьмя осями, 14 партий, карточки, аналитика, хронология.</span>
-              </li>
-              <li class="is-next">
-                <b>Дальше</b>
-                <span>Белорусскоязычная версия, короткий тест, история позиций партий по годам.</span>
-              </li>
-            </ol>
-          </div>
-          <div class="about__card glass">
-            <h3>Источники</h3>
-            <ul class="sources">
-              <li>Итоги выборов в Палату представителей, 2024</li>
-              <li>Программы и официальные сайты партий</li>
-              <li>Публичные заявления лидеров партий</li>
-              <li>Закон «О политических партиях» в редакции 2023 года</li>
-            </ul>
-            <a class="link-arrow" href="https://github.com/Arbuzyakaby/BelPolitCompass" target="_blank" rel="noopener">Код на GitHub <span aria-hidden="true">↗</span></a>
-          </div>
-          <div class="about__card glass" id="cite">
-            <h3>Как цитировать</h3>
-            <p class="cite" id="citeText">BelPolitCompass — политический компас Беларуси, <span data-version>Alpha 0.3</span>, данные на <span data-updated></span>.<br />https://github.com/Arbuzyakaby/BelPolitCompass</p>
-            <button class="btn btn--ghost btn--sm" type="button" id="citeCopy">Скопировать</button>
-            <span class="cite__msg" id="citeMsg" role="status"></span>
-          </div>
-          <div class="about__card glass">
-            <h3>Как помочь проекту</h3>
-            <p class="about__small">
-              Нашли ошибку в оценке или опечатку — откройте issue на GitHub. Умеете программировать — присылайте pull request:
-              все данные лежат в одном файле <code>js/data.js</code>.
-            </p>
-          </div>
-        </aside>
       </div>
 
       <div class="disclaimer glass reveal">
@@ -578,12 +676,12 @@
     </section>
   </main>
 
-  <!-- ─────────── Футер ─────────── -->
+  <!-- ─────────── Подвал ─────────── -->
   <footer class="footer">
     <div class="ornament" aria-hidden="true"></div>
     <div class="footer__inner">
       <div class="footer__brand">
-        <a class="brand brand--lg" href="#top">
+        <a class="brand brand--lg" href="#home">
           <span class="brand__mark" aria-hidden="true">
             <svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2" opacity=".35"/><path d="M16 5l3.2 11L16 27l-3.2-11z" fill="currentColor"/><circle cx="16" cy="16" r="2.2" fill="var(--bg)"/></svg>
           </span>
@@ -591,15 +689,15 @@
         </a>
         <p class="footer__tag">Карта белорусской политики — без лозунгов, в четырёх измерениях.</p>
         <div class="footer__badges">
-          <a class="pill pill--version" data-version href="https://github.com/Arbuzyakaby/BelPolitCompass/blob/HEAD/CHANGELOG.md" target="_blank" rel="noopener" title="Что нового в этой версии">Alpha 0.3</a>
+          <a class="pill pill--version" data-version href="https://github.com/Arbuzyakaby/BelPolitCompass/blob/HEAD/CHANGELOG.md" target="_blank" rel="noopener" title="Что нового в этой версии">Alpha 0.4</a>
           <span class="pill">14 партий</span>
           <span class="pill">4 оси</span>
           <span class="pill">40 вопросов</span>
         </div>
         <p class="footer__updated">Данные на <span data-updated></span></p>
       </div>
-      <nav class="footer__col" aria-label="Разделы">
-        <h4>Разделы</h4>
+      <nav class="footer__col" aria-labelledby="fNav">
+        <h2 class="footer__h" id="fNav">Разделы</h2>
         <a href="#compass">Компас</a>
         <a href="#quiz">Тест</a>
         <a href="#analytics">Аналитика</a>
@@ -607,22 +705,24 @@
         <a href="#method">Оси и методология</a>
       </nav>
       <div class="footer__col">
-        <h4>Оси</h4>
+        <h2 class="footer__h">Оси</h2>
         <span>Восток ↔ Запад</span>
         <span>Горизонталь ↔ Вертикаль</span>
         <span>Госсектор ↔ Рынок</span>
         <span>Советская ↔ Национальная</span>
       </div>
       <div class="footer__col">
-        <h4>Помощь</h4>
+        <h2 class="footer__h">Помощь</h2>
         <button class="footer__link" type="button" data-tour-start>Как пользоваться</button>
-        <button class="footer__link" type="button" data-settings-open>Настройки</button>
+        <button class="footer__link" type="button" data-settings-open="main">Настройки</button>
+        <button class="footer__link" type="button" data-settings-open="a11y">Специальные возможности</button>
+        <button class="footer__link" type="button" data-simple-toggle aria-pressed="false">Упрощённый режим</button>
         <a href="#faq">Частые вопросы</a>
-        <a href="#cite">Как цитировать</a>
       </div>
       <div class="footer__col">
-        <h4>Проект</h4>
+        <h2 class="footer__h">Проект</h2>
         <a href="#about">О проекте</a>
+        <a href="#cite">Как цитировать</a>
         <a href="https://github.com/Arbuzyakaby/BelPolitCompass" target="_blank" rel="noopener">GitHub</a>
         <a href="https://github.com/Arbuzyakaby/BelPolitCompass/blob/HEAD/CHANGELOG.md" target="_blank" rel="noopener">Список изменений</a>
         <a href="https://github.com/Arbuzyakaby/BelPolitCompass/issues" target="_blank" rel="noopener">Сообщить об ошибке</a>
@@ -630,9 +730,9 @@
     </div>
     <div class="footer__bottom">
       <span>© 2026 BelPolitCompass. Образовательный проект, не агитирует ни за одну партию.</span>
-      <span class="footer__made">Сделано с <span class="heart">♥</span> и открытым кодом</span>
-      <a class="to-top" href="#top" aria-label="Наверх">
-        <svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="footer__made">Сделано с <span class="heart" aria-label="любовью">♥</span> и открытым кодом</span>
+      <a class="to-top" href="#home" aria-label="Наверх, на главную">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </a>
     </div>
   </footer>
@@ -643,62 +743,172 @@
       <header class="sheet__head">
         <h2 id="settingsTitle">Настройки</h2>
         <button class="icon-btn" value="close" aria-label="Закрыть настройки">
-          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg>
         </button>
       </header>
 
-      <div class="sheet__body">
-        <section class="set-group" aria-labelledby="setLook">
-          <h3 id="setLook">Внешний вид</h3>
-          <fieldset class="set-row">
-            <legend>Тема</legend>
-            <div class="choice">
-              <label><input type="radio" name="theme" value="system" /><span>Как в системе</span></label>
-              <label><input type="radio" name="theme" value="light" /><span>Светлая</span></label>
-              <label><input type="radio" name="theme" value="dark" /><span>Тёмная</span></label>
-            </div>
-          </fieldset>
-          <fieldset class="set-row">
-            <legend>Размер текста</legend>
-            <div class="choice choice--fs">
-              <label><input type="radio" name="fs" value="md" /><span><i style="font-size:13px">Аа</i>Обычный</span></label>
-              <label><input type="radio" name="fs" value="lg" /><span><i style="font-size:15px">Аа</i>Крупнее</span></label>
-              <label><input type="radio" name="fs" value="xl" /><span><i style="font-size:17px">Аа</i>Крупный</span></label>
-            </div>
-          </fieldset>
-          <label class="set-toggle">
-            <span><b>Повышенная контрастность</b><small>Темнее текст, чётче линии и границы</small></span>
-            <span class="switch"><input type="checkbox" name="contrast" /><span class="switch__track"></span></span>
-          </label>
-          <label class="set-toggle">
-            <span><b>Подсказки «Как читать»</b><small>Короткие пояснения под заголовками разделов</small></span>
-            <span class="switch"><input type="checkbox" name="hints" /><span class="switch__track"></span></span>
-          </label>
-        </section>
+      <div class="sheet__tabs" role="tablist" aria-label="Разделы настроек" id="sheetTabs">
+        <button class="sheet__tab" type="button" role="tab" id="stab-main" aria-controls="spane-main" aria-selected="true">Основные</button>
+        <button class="sheet__tab" type="button" role="tab" id="stab-a11y" aria-controls="spane-a11y" aria-selected="false" tabindex="-1">Спецвозможности</button>
+        <button class="sheet__tab" type="button" role="tab" id="stab-data" aria-controls="spane-data" aria-selected="false" tabindex="-1">Данные</button>
+      </div>
 
-        <section class="set-group" aria-labelledby="setMotion">
-          <h3 id="setMotion">Анимации</h3>
-          <fieldset class="set-row set-row--stack">
-            <legend class="sr-only">Режим анимаций</legend>
-            <label class="opt"><input type="radio" name="motion" value="system" /><span><b>Как в системе</b><small id="motionSys"></small></span></label>
-            <label class="opt"><input type="radio" name="motion" value="full" /><span><b>Полные</b><small>Переворот карточек, плавное движение точек, появление блоков</small></span></label>
-            <label class="opt"><input type="radio" name="motion" value="reduced" /><span><b>Сокращённые</b><small>Только короткие переходы — без появления блоков и пульсации</small></span></label>
-            <label class="opt"><input type="radio" name="motion" value="off" /><span><b>Выключены</b><small>Всё меняется мгновенно</small></span></label>
-          </fieldset>
-        </section>
+      <div class="sheet__body" id="sheetBody">
+        <!-- ── Основные ── -->
+        <div class="spane" id="spane-main" role="tabpanel" aria-labelledby="stab-main" tabindex="0">
+          <section class="set-group" aria-labelledby="setSimple">
+            <h3 id="setSimple">Упрощённый режим</h3>
+            <label class="set-toggle set-toggle--hero">
+              <span><b>Пояснение к каждой строке</b><small>Для тех, кто впервые разбирается в политике: простыми словами объясняются термины, диаграммы, вопросы теста и позиции партий.</small></span>
+              <span class="switch"><input type="checkbox" name="simple" /><span class="switch__track"></span></span>
+            </label>
+            <p class="set-demo simple">Так выглядит пояснение в упрощённом режиме. Оно появится под заголовками, у каждой партии, в тесте и в диаграммах.</p>
+          </section>
 
-        <section class="set-group" aria-labelledby="setData">
-          <h3 id="setData">Данные и тур</h3>
-          <p class="set-note" id="dataStatus"></p>
-          <div class="set-actions">
-            <button class="btn btn--ghost btn--sm" type="button" data-set="tour">Показать тур ещё раз</button>
-            <button class="btn btn--ghost btn--sm" type="button" data-set="quiz">Удалить ответы теста</button>
-            <button class="btn btn--ghost btn--sm" type="button" data-set="axes">Вернуть оси по умолчанию</button>
-            <button class="btn btn--ghost btn--sm" type="button" data-set="prefs">Сбросить настройки</button>
-            <button class="btn btn--danger btn--sm" type="button" data-set="all">Удалить все данные сайта</button>
-          </div>
-          <p class="set-msg" id="setMsg" role="status" aria-live="polite"></p>
-        </section>
+          <section class="set-group" aria-labelledby="setLook">
+            <h3 id="setLook">Внешний вид</h3>
+            <fieldset class="set-row">
+              <legend>Тема</legend>
+              <div class="choice">
+                <label><input type="radio" name="theme" value="system" /><span>Как в системе</span></label>
+                <label><input type="radio" name="theme" value="light" /><span>Светлая</span></label>
+                <label><input type="radio" name="theme" value="dark" /><span>Тёмная</span></label>
+              </div>
+            </fieldset>
+            <fieldset class="set-row">
+              <legend>Размер текста</legend>
+              <div class="choice choice--fs">
+                <label><input type="radio" name="fs" value="md" /><span><i class="fs-a fs-a--1" aria-hidden="true">Аа</i>Обычный</span></label>
+                <label><input type="radio" name="fs" value="lg" /><span><i class="fs-a fs-a--2" aria-hidden="true">Аа</i>Крупнее</span></label>
+                <label><input type="radio" name="fs" value="xl" /><span><i class="fs-a fs-a--3" aria-hidden="true">Аа</i>Крупный</span></label>
+                <label><input type="radio" name="fs" value="xxl" /><span><i class="fs-a fs-a--4" aria-hidden="true">Аа</i>Очень крупный</span></label>
+              </div>
+            </fieldset>
+            <label class="set-toggle">
+              <span><b>Подсказки «Как читать»</b><small>Короткие пояснения под заголовками разделов</small></span>
+              <span class="switch"><input type="checkbox" name="hints" /><span class="switch__track"></span></span>
+            </label>
+          </section>
+
+          <section class="set-group" aria-labelledby="setMotion">
+            <h3 id="setMotion">Анимации</h3>
+            <fieldset class="set-row set-row--stack">
+              <legend class="sr-only">Режим анимаций</legend>
+              <label class="opt"><input type="radio" name="motion" value="system" /><span><b>Как в системе</b><small id="motionSys"></small></span></label>
+              <label class="opt"><input type="radio" name="motion" value="full" /><span><b>Полные</b><small>Переворот карточек, плавное движение точек, появление блоков</small></span></label>
+              <label class="opt"><input type="radio" name="motion" value="reduced" /><span><b>Сокращённые</b><small>Только короткие переходы — без появления блоков и пульсации</small></span></label>
+              <label class="opt"><input type="radio" name="motion" value="off" /><span><b>Выключены</b><small>Всё меняется мгновенно</small></span></label>
+            </fieldset>
+          </section>
+        </div>
+
+        <!-- ── Специальные возможности ── -->
+        <div class="spane" id="spane-a11y" role="tabpanel" aria-labelledby="stab-a11y" tabindex="0" hidden>
+          <section class="set-group" aria-labelledby="setPresets">
+            <h3 id="setPresets">Быстрые профили</h3>
+            <p class="set-note">Профиль включает подходящий набор настроек. Потом любую из них можно поменять вручную.</p>
+            <div class="presets" id="presets"></div>
+            <button class="btn btn--ghost btn--sm set-reset" type="button" data-set="a11y">Сбросить специальные возможности</button>
+          </section>
+
+          <section class="set-group" aria-labelledby="setVision">
+            <h3 id="setVision">Зрение</h3>
+            <fieldset class="set-row">
+              <legend>Контрастность</legend>
+              <div class="choice">
+                <label><input type="radio" name="contrast" value="normal" /><span>Обычная</span></label>
+                <label><input type="radio" name="contrast" value="high" /><span>Повышенная</span></label>
+                <label><input type="radio" name="contrast" value="max" /><span>Максимальная</span></label>
+              </div>
+            </fieldset>
+            <label class="set-toggle">
+              <span><b>Удобочитаемый шрифт</b><small>Простые широкие буквы без тонких штрихов — легче при дислексии и слабом зрении</small></span>
+              <span class="switch"><input type="checkbox" name="font" value="readable" data-off="default" /><span class="switch__track"></span></span>
+            </label>
+            <label class="set-toggle">
+              <span><b>Увеличенные интервалы</b><small>Больше расстояния между буквами, словами и строками</small></span>
+              <span class="switch"><input type="checkbox" name="spacing" /><span class="switch__track"></span></span>
+            </label>
+            <label class="set-toggle">
+              <span><b>Подчёркивать ссылки</b><small>Ссылки выделяются не только цветом</small></span>
+              <span class="switch"><input type="checkbox" name="underline" /><span class="switch__track"></span></span>
+            </label>
+            <label class="set-toggle">
+              <span><b>Крупный курсор</b><small>Указатель мыши в два раза больше и с контрастной обводкой</small></span>
+              <span class="switch"><input type="checkbox" name="cursor" /><span class="switch__track"></span></span>
+            </label>
+            <label class="set-toggle">
+              <span><b>Цвета для дальтоников</b><small>Палитра партий, различимая при протанопии, дейтеранопии и тританопии</small></span>
+              <span class="switch"><input type="checkbox" name="cvd" /><span class="switch__track"></span></span>
+            </label>
+          </section>
+
+          <section class="set-group" aria-labelledby="setReading">
+            <h3 id="setReading">Чтение и понимание</h3>
+            <label class="set-toggle">
+              <span><b>Линейка для чтения</b><small>Светлая полоса следует за курсором или пальцем и помогает не терять строку</small></span>
+              <span class="switch"><input type="checkbox" name="guide" /><span class="switch__track"></span></span>
+            </label>
+            <label class="set-toggle">
+              <span><b>Озвучивание текста</b><small id="ttsNote">Кнопки «Прочитать вслух» у вопросов теста и карточек партий, чтение выделенного текста</small></span>
+              <span class="switch"><input type="checkbox" name="tts" /><span class="switch__track"></span></span>
+            </label>
+            <fieldset class="set-row set-row--sub" id="ttsRateRow">
+              <legend>Скорость чтения</legend>
+              <div class="choice">
+                <label><input type="radio" name="ttsRate" value="slow" /><span>Медленно</span></label>
+                <label><input type="radio" name="ttsRate" value="normal" /><span>Обычно</span></label>
+                <label><input type="radio" name="ttsRate" value="fast" /><span>Быстро</span></label>
+              </div>
+            </fieldset>
+            <label class="set-toggle">
+              <span><b>Данные диаграмм таблицами</b><small>Под каждой диаграммой сразу открыта таблица — удобно для экранного диктора</small></span>
+              <span class="switch"><input type="checkbox" name="tables" /><span class="switch__track"></span></span>
+            </label>
+          </section>
+
+          <section class="set-group" aria-labelledby="setControl">
+            <h3 id="setControl">Управление</h3>
+            <label class="set-toggle">
+              <span><b>Крупные кнопки</b><small>Все кнопки и переключатели не меньше 44 × 44 точек — легче попасть при треморе</small></span>
+              <span class="switch"><input type="checkbox" name="targets" /><span class="switch__track"></span></span>
+            </label>
+            <label class="set-toggle">
+              <span><b>Заметная рамка фокуса</b><small>Толстая жёлто-чёрная рамка вокруг элемента, выбранного клавиатурой</small></span>
+              <span class="switch"><input type="checkbox" name="focus" /><span class="switch__track"></span></span>
+            </label>
+            <label class="set-toggle">
+              <span><b>Автопереход в тесте</b><small>После ответа сразу следующий вопрос. Выключите, чтобы переходить кнопкой «Далее»</small></span>
+              <span class="switch"><input type="checkbox" name="autoNext" /><span class="switch__track"></span></span>
+            </label>
+            <div class="keys">
+              <p class="keys__title">Клавиатура</p>
+              <dl>
+                <div><dt><kbd>Tab</kbd></dt><dd>перейти к следующему элементу</dd></div>
+                <div><dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>соседняя вкладка (в меню) или партия (в карточке)</dd></div>
+                <div><dt><kbd>Home</kbd> <kbd>End</kbd></dt><dd>первая и последняя вкладка</dd></div>
+                <div><dt><kbd>1</kbd>–<kbd>5</kbd></dt><dd>ответ в тесте; <kbd>Backspace</kbd> — назад</dd></div>
+                <div><dt><kbd>Esc</kbd></dt><dd>закрыть карточку, настройки или тур</dd></div>
+              </dl>
+            </div>
+          </section>
+        </div>
+
+        <!-- ── Данные ── -->
+        <div class="spane" id="spane-data" role="tabpanel" aria-labelledby="stab-data" tabindex="0" hidden>
+          <section class="set-group" aria-labelledby="setData">
+            <h3 id="setData">Данные и тур</h3>
+            <p class="set-note" id="dataStatus"></p>
+            <div class="set-actions">
+              <button class="btn btn--ghost btn--sm" type="button" data-set="tour">Показать тур ещё раз</button>
+              <button class="btn btn--ghost btn--sm" type="button" data-set="quiz">Удалить ответы теста</button>
+              <button class="btn btn--ghost btn--sm" type="button" data-set="axes">Вернуть оси по умолчанию</button>
+              <button class="btn btn--ghost btn--sm" type="button" data-set="prefs">Сбросить все настройки</button>
+              <button class="btn btn--danger btn--sm" type="button" data-set="all">Удалить все данные сайта</button>
+            </div>
+          </section>
+        </div>
+        <p class="set-msg" id="setMsg" role="status" aria-live="polite"></p>
       </div>
 
       <footer class="sheet__foot">Настройки и ответы хранятся только в этом браузере — на сервер ничего не отправляется.</footer>
@@ -706,10 +916,14 @@
   </dialog>
 
   <script src="js/data.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/tabs.js"></script>
   <script src="js/app.js"></script>
   <script src="js/charts.js"></script>
   <script src="js/quiz.js"></script>
   <script src="js/settings.js"></script>
+  <script src="js/a11y.js"></script>
+  <script src="js/toc.js"></script>
   <script src="js/tour.js"></script>
 </body>
 </html>

@@ -18,3 +18,7 @@ dist/
 *.log
 .env
 .env.*
+
+# Автотесты
+test-results/
+playwright-report/
