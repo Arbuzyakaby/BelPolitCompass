@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>BelPolitCompass</title>
-  <meta name="description" content="Интерактивный политический компас белорусских партий: четыре оси, карточки партий, парламент и аналитика." />
+  <meta name="description" content="Интерактивный политический компас белорусских партий: четыре оси, тест «Где я на компасе», карточки партий, парламент и аналитика." />
   <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
   <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)" />
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
@@ -23,12 +23,6 @@
   </script>
 </head>
 <body>
-  <div class="aurora" aria-hidden="true">
-    <span class="aurora__blob aurora__blob--a"></span>
-    <span class="aurora__blob aurora__blob--b"></span>
-    <span class="aurora__blob aurora__blob--c"></span>
-  </div>
-
   <!-- ─────────── Навигация ─────────── -->
   <header class="nav" id="nav">
     <div class="nav__inner">
@@ -38,17 +32,22 @@
         </span>
         <span class="brand__name">BelPolit<b>Compass</b></span>
       </a>
-      <nav class="nav__links" aria-label="Разделы">
+      <nav class="nav__links" id="navLinks" aria-label="Разделы">
         <a href="#compass">Компас</a>
+        <a href="#quiz">Тест</a>
         <a href="#analytics">Аналитика</a>
         <a href="#timeline">Хронология</a>
         <a href="#method">Методология</a>
+        <a href="#about">О проекте</a>
       </nav>
       <div class="nav__actions">
-        <span class="pill pill--version">Alpha 0.1</span>
+        <span class="pill pill--version" data-version>Alpha 0.2</span>
         <button class="icon-btn" id="themeToggle" type="button" aria-label="Сменить тему">
           <svg class="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><g stroke-linecap="round"><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></g></svg>
           <svg class="i-moon" viewBox="0 0 24 24"><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/></svg>
+        </button>
+        <button class="icon-btn nav__burger" id="navBurger" type="button" aria-label="Меню" aria-expanded="false" aria-controls="navLinks">
+          <svg viewBox="0 0 24 24"><path d="M4 8h16M4 16h16" stroke-linecap="round"/></svg>
         </button>
       </div>
     </div>
@@ -57,28 +56,38 @@
   <main id="top">
     <!-- ─────────── Hero ─────────── -->
     <section class="hero">
-      <div class="hero__eyebrow reveal">
-        <span class="dot-live"></span> Интерактивное исследование · обновлено <span data-updated></span>
+      <div class="hero__text">
+        <p class="hero__meta"><span data-version>Alpha 0.2</span> · данные на <span data-updated></span></p>
+        <h1 class="hero__title">Политический компас Беларуси</h1>
+        <p class="hero__lead">
+          Где стоят 14 белорусских партий по четырём линиям, которые на самом деле разделяют политику страны:
+          <b>Восток или Запад</b>, <b>вертикаль или горизонталь</b>, <b>госсектор или рынок</b>,
+          <b>советская или национальная идентичность</b>.
+        </p>
+        <div class="hero__cta">
+          <a class="btn btn--primary" href="#quiz">Пройти тест <span class="btn__note">40 вопросов</span></a>
+          <a class="link-arrow" href="#compass">Открыть компас <span aria-hidden="true">→</span></a>
+        </div>
       </div>
-      <h1 class="hero__title reveal">
-        Политический компас<br /><span class="gradient-text">Беларуси</span>
-      </h1>
-      <p class="hero__lead reveal">
-        Четыре оси, созданные специально для белорусского контекста: вектор, власть, экономика и идентичность.
-        Четырнадцать партий — действующих, ликвидированных и так и не зарегистрированных.
-      </p>
-      <div class="hero__cta reveal">
-        <a class="btn btn--primary" href="#compass">Открыть компас</a>
-        <a class="btn btn--ghost" href="#method">Как это устроено</a>
-      </div>
-      <div class="hero__stats reveal" id="heroStats"></div>
-      <div class="hero__scroll" aria-hidden="true"><span></span></div>
+
+      <figure class="hero__preview" aria-label="Мини-компас: геополитический вектор и модель власти">
+        <div class="mini" id="heroMini">
+          <span class="mini__lbl mini__lbl--t">Вертикаль</span>
+          <span class="mini__lbl mini__lbl--b">Горизонталь</span>
+          <span class="mini__lbl mini__lbl--l">Восток</span>
+          <span class="mini__lbl mini__lbl--r">Запад</span>
+          <div class="mini__plane" id="heroPlane"></div>
+        </div>
+        <figcaption class="hero__caption">Вектор × власть. Нажмите на точку, чтобы открыть карточку партии.</figcaption>
+      </figure>
+
+      <div class="hero__strip" id="heroStrip"></div>
     </section>
 
     <!-- ─────────── Компас + сайдбар ─────────── -->
     <section class="section" id="compass">
       <div class="section__head reveal">
-        <span class="section__kicker">01 · Компас</span>
+        <span class="section__kicker">Компас</span>
         <h2 class="section__title">Кто где стоит</h2>
         <p class="section__lead">Выберите любые две оси. Нажмите на партию в списке или на точку — карточка перевернётся.</p>
       </div>
@@ -87,7 +96,6 @@
         <!-- Сайдбар-карта -->
         <aside class="flip reveal" id="flip" aria-label="Партии">
           <div class="flip__inner" id="flipInner">
-            <!-- Лицевая сторона: список -->
             <div class="flip__face flip__front glass">
               <div class="sb-head">
                 <div class="sb-head__title">Партии · мандаты в ПП · <span class="muted">VIII созыв</span></div>
@@ -101,7 +109,6 @@
               </div>
               <ul class="party-list" id="partyList"></ul>
             </div>
-            <!-- Обратная сторона: подробная карточка -->
             <div class="flip__face flip__back glass" id="partyDetail" aria-live="polite"></div>
           </div>
         </aside>
@@ -109,20 +116,19 @@
         <!-- Компас -->
         <div class="compass-panel glass reveal">
           <div class="compass-controls">
-            <label class="select">
-              <span class="select__label">Ось X</span>
-              <select id="axisX"></select>
-            </label>
+            <div class="dd" id="ddX">
+              <span class="dd__label" id="ddXLabel">Ось X</span>
+            </div>
             <button class="icon-btn icon-btn--sm" id="swapAxes" type="button" aria-label="Поменять оси местами" title="Поменять оси">
               <svg viewBox="0 0 24 24"><path d="M7 7h12l-3-3M17 17H5l3 3" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
-            <label class="select">
-              <span class="select__label">Ось Y</span>
-              <select id="axisY"></select>
-            </label>
+            <div class="dd" id="ddY">
+              <span class="dd__label" id="ddYLabel">Ось Y</span>
+            </div>
             <div class="compass-toggles">
               <label class="switch"><input type="checkbox" id="toggleHulls" checked /><span class="switch__track"></span>Лагеря</label>
               <label class="switch"><input type="checkbox" id="toggleInactive" checked /><span class="switch__track"></span>Вне системы</label>
+              <label class="switch" id="meSwitch" hidden><input type="checkbox" id="toggleMe" checked /><span class="switch__track"></span>Я</label>
             </div>
           </div>
 
@@ -148,16 +154,27 @@
             <span><i class="lg lg--gov"></i>Провластные</span>
             <span><i class="lg lg--opp"></i>Оппозиционные</span>
             <span><i class="lg lg--ring"></i>Пунктир — вне системы</span>
+            <span class="lg-me" id="legendMe" hidden><i class="lg lg--me"></i>Вы (по тесту)</span>
             <span class="muted">Размер точки ∝ мандатам</span>
           </div>
         </div>
       </div>
     </section>
 
+    <!-- ─────────── Тест ─────────── -->
+    <section class="section" id="quiz">
+      <div class="section__head reveal">
+        <span class="section__kicker">Тест</span>
+        <h2 class="section__title">Где я на компасе?</h2>
+        <p class="section__lead">40 утверждений о белорусской политике — по десять на каждую ось. Ответы остаются только в вашем браузере.</p>
+      </div>
+      <div class="quiz glass reveal" id="quizBox" aria-live="polite"></div>
+    </section>
+
     <!-- ─────────── Аналитика ─────────── -->
     <section class="section" id="analytics">
       <div class="section__head reveal">
-        <span class="section__kicker">02 · Аналитика</span>
+        <span class="section__kicker">Аналитика</span>
         <h2 class="section__title">Цифры и диаграммы</h2>
         <p class="section__lead">Парламент, распределение мандатов, сравнение партий и разрыв между лагерями.</p>
       </div>
@@ -233,7 +250,7 @@
     <!-- ─────────── Хронология ─────────── -->
     <section class="section" id="timeline">
       <div class="section__head reveal">
-        <span class="section__kicker">03 · Хронология</span>
+        <span class="section__kicker">Хронология</span>
         <h2 class="section__title">Как менялась партийная система</h2>
       </div>
       <ol class="tl" id="tl"><span class="tl__line"><span class="tl__fill" id="tlFill"></span></span></ol>
@@ -242,17 +259,135 @@
     <!-- ─────────── Методология ─────────── -->
     <section class="section" id="method">
       <div class="section__head reveal">
-        <span class="section__kicker">04 · Методология</span>
+        <span class="section__kicker">Методология</span>
         <h2 class="section__title">Почему именно эти оси</h2>
         <p class="section__lead">Классический компас «лево-право × авторитаризм-либертарианство» плохо описывает Беларусь: здесь линии раскола проходят иначе.</p>
       </div>
       <div class="method" id="methodGrid"></div>
+    </section>
+
+    <!-- ─────────── О проекте ─────────── -->
+    <section class="section" id="about">
+      <div class="section__head reveal">
+        <span class="section__kicker">О проекте</span>
+        <h2 class="section__title">Что такое BelPolitCompass</h2>
+        <p class="section__lead">
+          Открытый образовательный проект: карта белорусской политики, на которой можно сравнить партии между собой
+          и найти на ней себя.
+        </p>
+      </div>
+
+      <div class="about">
+        <div class="about__main">
+          <article class="about__block reveal">
+            <h3>Зачем он нужен</h3>
+            <p>
+              О белорусских партиях обычно говорят одним словом: «провластная» или «оппозиционная». За этим теряются различия
+              внутри лагерей. Коммунисты и ЛДПБ по-разному смотрят на экономику, а ОГП и «Справедливый мир» — почти
+              противоположности по вопросу рынка. Компас показывает эти различия наглядно.
+            </p>
+          </article>
+          <article class="about__block reveal">
+            <h3>Как оцениваются партии</h3>
+            <p>
+              Каждая партия получает координату от −10 до +10 по каждой из четырёх осей. Оценка опирается на программы
+              партий, публичные заявления лидеров и политическую практику: голосования, участие в выборах, союзы.
+              Это экспертная оценка, а не позиция самих партий, и её можно оспорить.
+            </p>
+          </article>
+          <article class="about__block reveal">
+            <h3>Как устроен тест</h3>
+            <p>
+              40 утверждений, по 10 на ось. На каждой оси половина утверждений сформулирована в пользу одного полюса,
+              половина — в пользу другого, чтобы привычка соглашаться не сдвигала результат. Ваш результат считается
+              той же шкалой, что и позиции партий, поэтому их можно сравнивать напрямую.
+            </p>
+          </article>
+
+          <div class="principles reveal">
+            <div class="principle">
+              <b>Нейтральность</b>
+              <span>Проект не агитирует ни за одну политическую силу и одинаково описывает все партии.</span>
+            </div>
+            <div class="principle">
+              <b>Открытость</b>
+              <span>Весь код и все оценки лежат в открытом репозитории. Любую координату можно проверить и предложить правку.</span>
+            </div>
+            <div class="principle">
+              <b>Приватность</b>
+              <span>Ответы теста никуда не отправляются: они хранятся только в вашем браузере.</span>
+            </div>
+          </div>
+
+          <div class="faq reveal">
+            <h3>Частые вопросы</h3>
+            <details>
+              <summary>Почему на компасе есть ликвидированные партии?</summary>
+              <p>
+                После перерегистрации 2023 года официально действуют только четыре партии, и все они поддерживают курс власти.
+                Без ликвидированных и незарегистрированных партий компас показал бы лишь один угол политического поля.
+              </p>
+            </details>
+            <details>
+              <summary>Откуда данные о мандатах?</summary>
+              <p>
+                Из официальных итогов выборов в Палату представителей VIII созыва 25 февраля 2024 года: «Белая Русь» — 51,
+                РПТС — 8, КПБ — 7, ЛДПБ — 4, беспартийные — 40.
+              </p>
+            </details>
+            <details>
+              <summary>Я не согласен с позицией партии. Что делать?</summary>
+              <p>
+                Откройте обсуждение (issue) в репозитории проекта на GitHub и укажите, на чём основано ваше мнение:
+                программа, заявление, голосование. Обоснованные правки войдут в следующую версию.
+              </p>
+            </details>
+            <details>
+              <summary>Насколько точен тест?</summary>
+              <p>
+                Это ориентир, а не диагноз. 40 вопросов дают примерную картину, а результат зависит от формулировок.
+                Сравнивайте себя с партиями, но не принимайте цифры слишком буквально.
+              </p>
+            </details>
+          </div>
+        </div>
+
+        <aside class="about__side reveal">
+          <div class="about__card glass">
+            <h3>Версии</h3>
+            <ol class="versions" id="versions">
+              <li class="is-current">
+                <b>Alpha 0.2</b>
+                <span>Тест «Где я на компасе», раздел «О проекте», новые выпадающие списки, обновлённый первый экран.</span>
+              </li>
+              <li>
+                <b>Alpha 0.1</b>
+                <span>Компас с четырьмя осями, 14 партий, карточки, аналитика, хронология.</span>
+              </li>
+              <li class="is-next">
+                <b>Дальше</b>
+                <span>Белорусскоязычная версия, короткий тест, история позиций партий по годам.</span>
+              </li>
+            </ol>
+          </div>
+          <div class="about__card glass">
+            <h3>Источники</h3>
+            <ul class="sources">
+              <li>Итоги выборов в Палату представителей, 2024</li>
+              <li>Программы и официальные сайты партий</li>
+              <li>Публичные заявления лидеров партий</li>
+              <li>Закон «О политических партиях» в редакции 2023 года</li>
+            </ul>
+            <a class="link-arrow" href="https://github.com/Arbuzyakaby/BelPolitCompass" target="_blank" rel="noopener">Код на GitHub <span aria-hidden="true">↗</span></a>
+          </div>
+        </aside>
+      </div>
+
       <div class="disclaimer glass reveal">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 8v5M12 16.5v.01" stroke-linecap="round"/></svg>
         <p>
           Позиции партий — <b>экспертная оценка</b> по шкале от −10 до +10 на основе программ, публичных заявлений и политической практики.
           Это не официальная позиция самих партий. Проект носит образовательный характер и не агитирует ни за одну политическую силу.
-          Данные о мандатах — по итогам выборов в Палату представителей 2024 года.
         </p>
       </div>
     </section>
@@ -271,14 +406,16 @@
         </a>
         <p class="footer__tag">Карта белорусской политики — без лозунгов, в четырёх измерениях.</p>
         <div class="footer__badges">
-          <span class="pill pill--version">Alpha 0.1</span>
+          <span class="pill pill--version" data-version>Alpha 0.2</span>
           <span class="pill">14 партий</span>
           <span class="pill">4 оси</span>
+          <span class="pill">40 вопросов</span>
         </div>
       </div>
       <nav class="footer__col" aria-label="Разделы">
         <h4>Разделы</h4>
         <a href="#compass">Компас</a>
+        <a href="#quiz">Тест</a>
         <a href="#analytics">Аналитика</a>
         <a href="#timeline">Хронология</a>
         <a href="#method">Методология</a>
@@ -292,9 +429,9 @@
       </div>
       <div class="footer__col">
         <h4>Проект</h4>
+        <a href="#about">О проекте</a>
         <a href="https://github.com/Arbuzyakaby/BelPolitCompass" target="_blank" rel="noopener">GitHub</a>
         <a href="https://github.com/Arbuzyakaby/BelPolitCompass/blob/HEAD/CHANGELOG.md" target="_blank" rel="noopener">Список изменений</a>
-        <a href="#method">Об оценках</a>
       </div>
     </div>
     <div class="footer__bottom">
@@ -309,5 +446,6 @@
   <script src="js/data.js"></script>
   <script src="js/app.js"></script>
   <script src="js/charts.js"></script>
+  <script src="js/quiz.js"></script>
 </body>
 </html>

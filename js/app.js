@@ -145,17 +145,74 @@
 
   /* ---------- Hero ---------- */
   $$('[data-updated]').forEach((el) => (el.textContent = D.updated));
-  const partySeats = parties.reduce((s, p) => s + p.seats, 0);
-  const heroStats = [
-    { n: parties.length, label: 'партий на компасе' },
-    { n: parties.filter(isActive).length, label: 'действуют официально' },
-    { n: partySeats, label: 'из 110 мест — у партий', suffix: '' },
-    { n: D.axes.length, label: 'оси белорусской политики' },
-  ];
-  $('#heroStats').innerHTML = heroStats
-    .map((s) => `<div class="hstat"><div class="hstat__num" data-count="${s.n}">${s.n}</div><div class="hstat__label">${s.label}</div></div>`)
-    .join('');
-  onApproach($('#heroStats'), () => $$('[data-count]', $('#heroStats')).forEach((el) => countUp(el, +el.dataset.count)));
+  $$('[data-version]').forEach((el) => (el.textContent = D.version));
+
+  /* Мини-компас в первом экране: вектор × власть */
+  (function heroMini() {
+    const box = $('#heroPlane');
+    if (!box) return;
+    const P = 8;
+    const pct = (v) => P + ((v + 10) / 20) * (100 - P * 2);
+    // Партии с одинаковыми координатами слегка разводим по горизонтали
+    const seen = {};
+    const shift = parties.map((p) => {
+      const key = p.pos.vector + ':' + p.pos.power;
+      const n = (seen[key] = (seen[key] || 0) + 1) - 1;
+      return n === 0 ? 0 : (n % 2 ? 1 : -1) * Math.ceil(n / 2) * 3.2;
+    });
+    box.innerHTML =
+      '<span class="mini__ax mini__ax--h"></span><span class="mini__ax mini__ax--v"></span>' +
+      parties
+        .map((p, i) => {
+          const s = isActive(p) ? 10 + Math.sqrt(p.seats) * 2.4 : 12;
+          // Если прямо под точкой есть соседняя партия, подпись ставим слева
+          const crowded = parties.some(
+            (q) => q !== p && isActive(q) && q.pos.power < p.pos.power && p.pos.power - q.pos.power <= 1.5 && Math.abs(q.pos.vector - p.pos.vector) <= 1.5
+          );
+          return `<button class="mdot${isActive(p) ? ' is-active' : ''}${crowded ? ' is-lbl-left' : ''}" type="button" data-id="${p.id}"
+            style="--c:${p.color};--s:${s}px;left:${pct(p.pos.vector) + shift[i]}%;top:${100 - pct(p.pos.power)}%;--i:${i}"
+            aria-label="${p.name}"><i></i>${isActive(p) ? `<span>${p.abbr}</span>` : ''}<em>${p.short}</em></button>`;
+        })
+        .join('');
+    box.addEventListener('click', (e) => {
+      const b = e.target.closest('.mdot');
+      if (b) openParty(b.dataset.id);
+    });
+  })();
+
+  /* Полоска парламента под первым экраном: 110 мест */
+  (function heroStrip() {
+    const box = $('#heroStrip');
+    if (!box) return;
+    const P = D.parliament;
+    const groups = P.order.map((id) => byId[id]).concat({ short: 'Беспартийные', color: '#8E8E93', seats: P.nonPartisan });
+    const cells = groups.map((g) => `<span style="--c:${g.color};flex:${g.seats}"></span>`).join('');
+    box.innerHTML = `
+      <div class="strip__head">
+        <b>${P.title}, ${P.convocation}</b>
+        <span>${P.total} мест · выборы ${P.elected}</span>
+      </div>
+      <div class="strip__bar" role="img" aria-label="Распределение мест">${cells}</div>
+      <ul class="strip__legend">
+        ${groups.map((g) => `<li style="--c:${g.color}"><i></i>${g.short} <b>${g.seats}</b></li>`).join('')}
+      </ul>`;
+  })();
+
+  /* Мобильное меню */
+  const burger = $('#navBurger');
+  const navEl = $('#nav');
+  function setMenu(open) {
+    navEl.classList.toggle('is-open', open);
+    burger.setAttribute('aria-expanded', String(open));
+  }
+  burger.addEventListener('click', () => setMenu(!navEl.classList.contains('is-open')));
+  $$('#navLinks a').forEach((a) => a.addEventListener('click', () => setMenu(false)));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') setMenu(false);
+  });
+  document.addEventListener('pointerdown', (e) => {
+    if (!navEl.contains(e.target)) setMenu(false);
+  });
 
   /* ==========================================================================
      Сайдбар: список партий (лицевая сторона)
@@ -437,22 +494,132 @@
   /* ==========================================================================
      Компас
      ========================================================================== */
-  const selX = $('#axisX');
-  const selY = $('#axisY');
   const plane = $('#plane');
   const dotsBox = $('#dots');
   const tooltip = $('#tooltip');
   const hullSvg = $('#hulls');
   const showInactive = $('#toggleInactive');
   const showHulls = $('#toggleHulls');
+  const toggleMe = $('#toggleMe');
+  let me = null; // результат теста: { vector, power, economy, identity }
 
-  const opts = D.axes.map((a) => `<option value="${a.id}">${a.short}</option>`).join('');
-  selX.innerHTML = opts;
-  selY.innerHTML = opts;
-  selX.value = storage('bpc-ax') || 'vector';
-  selY.value = storage('bpc-ay') || 'power';
-  if (!axisById[selX.value]) selX.value = 'vector';
-  if (!axisById[selY.value] || selY.value === selX.value) selY.value = selX.value === 'power' ? 'vector' : 'power';
+  /* Кастомный выпадающий список: кнопка + listbox, клавиатура, тема */
+  const dropdowns = [];
+  function Dropdown(root, onChange) {
+    const id = root.id;
+    root.insertAdjacentHTML(
+      'beforeend',
+      `<button class="dd__btn" type="button" id="${id}Btn" aria-haspopup="listbox" aria-expanded="false"
+          aria-controls="${id}List" aria-labelledby="${id}Label ${id}Btn">
+        <span class="dd__val"></span>
+        <svg class="dd__chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <ul class="dd__list" role="listbox" id="${id}List" tabindex="-1" aria-labelledby="${id}Label">
+        ${D.axes
+          .map(
+            (a) => `<li class="dd__opt" role="option" id="${id}-${a.id}" data-v="${a.id}" aria-selected="false">
+              <span class="dd__text"><span class="dd__name">${a.name}</span><span class="dd__poles">${a.neg} ↔ ${a.pos}</span></span>
+              <span class="dd__hint"></span>
+              <svg class="dd__check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </li>`
+          )
+          .join('')}
+      </ul>`
+    );
+    const btn = $('.dd__btn', root);
+    const list = $('.dd__list', root);
+    const opts = $$('.dd__opt', root);
+    let val = D.axes[0].id;
+    let active = 0;
+
+    function paint() {
+      $('.dd__val', btn).textContent = axisById[val].name;
+      opts.forEach((o) => o.setAttribute('aria-selected', String(o.dataset.v === val)));
+    }
+    function highlight(i) {
+      active = (i + opts.length) % opts.length;
+      opts.forEach((o, k) => o.classList.toggle('is-active', k === active));
+      list.setAttribute('aria-activedescendant', opts[active].id);
+    }
+    function open() {
+      dropdowns.forEach((d) => d !== api && d.close());
+      root.classList.add('is-open');
+      btn.setAttribute('aria-expanded', 'true');
+      highlight(opts.findIndex((o) => o.dataset.v === val));
+      list.focus({ preventScroll: true });
+    }
+    function close(focusBtn) {
+      if (!root.classList.contains('is-open')) return;
+      root.classList.remove('is-open');
+      btn.setAttribute('aria-expanded', 'false');
+      if (focusBtn) btn.focus({ preventScroll: true });
+    }
+    function choose(v) {
+      close(true);
+      if (v === val) return;
+      const old = val;
+      val = v;
+      paint();
+      onChange(v, old);
+    }
+
+    btn.addEventListener('click', () => (root.classList.contains('is-open') ? close() : open()));
+    btn.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        open();
+      }
+    });
+    list.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown') highlight(active + 1);
+      else if (e.key === 'ArrowUp') highlight(active - 1);
+      else if (e.key === 'Home') highlight(0);
+      else if (e.key === 'End') highlight(opts.length - 1);
+      else if (e.key === 'Enter' || e.key === ' ') choose(opts[active].dataset.v);
+      else if (e.key === 'Escape') close(true);
+      else if (e.key === 'Tab') close();
+      else return;
+      e.preventDefault();
+      e.stopPropagation();
+    });
+    opts.forEach((o, i) => {
+      o.addEventListener('click', () => choose(o.dataset.v));
+      o.addEventListener('pointermove', () => highlight(i));
+    });
+    document.addEventListener('pointerdown', (e) => {
+      if (!root.contains(e.target)) close();
+    });
+
+    const api = {
+      get value() {
+        return val;
+      },
+      set value(v) {
+        val = v;
+        paint();
+      },
+      hint(otherVal, text) {
+        opts.forEach((o) => ($('.dd__hint', o).textContent = o.dataset.v === otherVal ? text : ''));
+      },
+      close,
+    };
+    dropdowns.push(api);
+    return api;
+  }
+
+  const selX = Dropdown($('#ddX'), (v, old) => onAxisChange(selX, old));
+  const selY = Dropdown($('#ddY'), (v, old) => onAxisChange(selY, old));
+  let ax0 = storage('bpc-ax');
+  let ay0 = storage('bpc-ay');
+  if (!axisById[ax0]) ax0 = 'vector';
+  if (!axisById[ay0] || ay0 === ax0) ay0 = ax0 === 'power' ? 'vector' : 'power';
+  selX.value = ax0;
+  selY.value = ay0;
+  function syncHints() {
+    selX.hint(selY.value, 'ось Y');
+    selY.hint(selX.value, 'ось X');
+  }
+  syncHints();
 
   // Сетка
   (function drawGrid() {
@@ -479,7 +646,12 @@
         <span class="pdot__label">${p.abbr}</span>
       </div>`;
     })
-    .join('');
+    .join('') +
+    `<div class="pdot pdot--me is-off" data-id="me" data-status="me" style="--c:var(--text);--s:20px;--i:0;--x:50;--y:50">
+        <span class="pdot__pulse"></span>
+        <span class="pdot__core"></span>
+        <span class="pdot__label">Вы</span>
+      </div>`;
   const dots = $$('.pdot', dotsBox);
 
   const PAD = 7;
@@ -490,6 +662,7 @@
     const ax = selX.value;
     const ay = selY.value;
     const vis = parties.filter((p) => isActive(p) || showInactive.checked);
+    if (me && toggleMe.checked) vis.push({ id: 'me', pos: me });
     const pts = vis.map((p) => ({ id: p.id, x: toPct(p.pos[ax]), y: 100 - toPct(p.pos[ay]), ox: 0, oy: 0 }));
     pts.forEach((p) => {
       p.ox = p.x;
@@ -686,33 +859,28 @@
     hullAnim = requestAnimationFrame(frame);
   }
 
+  // Скрываем весь слой целиком: у отдельных контуров прозрачность задаёт анимация
   hullSvg.classList.toggle('is-hidden', !showHulls.checked);
   showHulls.addEventListener('change', () => hullSvg.classList.toggle('is-hidden', !showHulls.checked));
+  toggleMe.addEventListener('change', () => renderCompass(false));
   showInactive.addEventListener('change', () => renderCompass(false));
 
-  function onAxisChange(changed) {
-    if (selX.value === selY.value) {
-      // Не даём выбрать одну ось дважды — меняем другую
-      const other = D.axes.find((a) => a.id !== selX.value && a.id !== (changed === selX ? prevX : prevY));
-      if (changed === selX) selY.value = prevX !== selX.value ? prevX : other.id;
-      else selX.value = prevY !== selY.value ? prevY : other.id;
-    }
-    prevX = selX.value;
-    prevY = selY.value;
+  function onAxisChange(changed, old) {
+    // Одну ось нельзя выбрать дважды: вторая ось забирает прежнее значение
+    const other = changed === selX ? selY : selX;
+    if (other.value === changed.value) other.value = old;
     storage('bpc-ax', selX.value);
     storage('bpc-ay', selY.value);
+    syncHints();
     renderCompass(true);
   }
-  let prevX = selX.value;
-  let prevY = selY.value;
-  selX.addEventListener('change', () => onAxisChange(selX));
-  selY.addEventListener('change', () => onAxisChange(selY));
   $('#swapAxes').addEventListener('click', (e) => {
     const t = selX.value;
     selX.value = selY.value;
     selY.value = t;
-    prevX = selX.value;
-    prevY = selY.value;
+    storage('bpc-ax', selX.value);
+    storage('bpc-ay', selY.value);
+    syncHints();
     const icon = e.currentTarget.querySelector('svg');
     icon.animate && icon.animate([{ transform: 'rotate(0)' }, { transform: 'rotate(180deg)' }], { duration: 500, easing: 'cubic-bezier(0.34,1.56,0.64,1)' });
     renderCompass(true);
@@ -731,8 +899,11 @@
     dotsBox.classList.toggle('has-focus', !!id);
   }
 
+  const fmt1 = (v) => fmt(Math.round(v * 10) / 10).replace('.', ',');
+
   function showTooltip(d) {
-    const p = byId[d.dataset.id];
+    const isMe = d.dataset.id === 'me';
+    const p = isMe ? { id: 'me', short: 'Вы (по тесту)', color: 'var(--text)', pos: me } : byId[d.dataset.id];
     const pt = layout[p.id];
     if (!pt) return;
     const ax = axisById[selX.value];
@@ -740,9 +911,9 @@
     tooltip.style.setProperty('--c', p.color);
     tooltip.innerHTML = `
       <b><i></i>${p.short}</b>
-      <div class="tt-row"><span>${ax.short}</span><span>${fmt(p.pos[ax.id])}</span></div>
-      <div class="tt-row"><span>${ay.short}</span><span>${fmt(p.pos[ay.id])}</span></div>
-      <div class="tt-row"><span>Мандаты</span><span>${p.seats}</span></div>`;
+      <div class="tt-row"><span>${ax.short}</span><span>${fmt1(p.pos[ax.id])}</span></div>
+      <div class="tt-row"><span>${ay.short}</span><span>${fmt1(p.pos[ay.id])}</span></div>
+      ${isMe ? '<div class="tt-row"><span>Нажмите — к результату</span><span></span></div>' : `<div class="tt-row"><span>Мандаты</span><span>${p.seats}</span></div>`}`;
     const w = plane.clientWidth;
     let left = (pt.x / 100) * w;
     left = Math.max(100, Math.min(w - 100, left));
@@ -763,7 +934,12 @@
     });
     d.addEventListener('click', () => {
       tooltip.classList.remove('is-on');
-      openParty(d.dataset.id);
+      if (d.dataset.id === 'me') {
+        const q = $('#quiz');
+        if (q) q.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+      } else {
+        openParty(d.dataset.id);
+      }
     });
   });
 
@@ -781,6 +957,25 @@
   observeReveal();
   $$('.card').forEach(spotlight);
 
-  /* Публичный API для charts.js */
-  window.BPCApp = { onApproach, replay, openParty, setHover, plural, seatWord, fmt, similarity, byId, observeReveal, spotlight, countUp, initSeg, reduced };
+  /* Результат теста на компасе */
+  function setMe(pos) {
+    me = pos;
+    $('#meSwitch').hidden = !pos;
+    $('#legendMe').hidden = !pos;
+    renderCompass(false);
+  }
+
+  function showMeOnCompass() {
+    if (!me) return;
+    toggleMe.checked = true;
+    renderCompass(false);
+    $('#compass').scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+    const d = dots.find((x) => x.dataset.id === 'me');
+    d.classList.remove('is-flash');
+    void d.offsetWidth;
+    d.classList.add('is-flash');
+  }
+
+  /* Публичный API для charts.js и quiz.js */
+  window.BPCApp = { setMe, showMeOnCompass, storage, axisById, fmt1, onApproach, replay, openParty, setHover, plural, seatWord, fmt, similarity, byId, observeReveal, spotlight, countUp, initSeg, reduced };
 })();
