@@ -1,5 +1,5 @@
 /* ==========================================================================
-   BelPolitCompass · Alpha 0.1 — компас, сайдбар-карта, общие утилиты
+   BelPolitCompass · Alpha 0.3 — компас, сайдбар-карта, общие утилиты
    ========================================================================== */
 (function () {
   'use strict';
@@ -7,10 +7,39 @@
   const D = window.BPC;
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const root = document.documentElement;
+
+  /* Режим анимаций задаётся в настройках и уже применён к <html> до отрисовки
+     (см. скрипт в <head>): full — все, reduced — только короткие переходы,
+     off — никаких. Без атрибута действует системная настройка. */
+  const mqReduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const noMotion = () => {
+    const m = root.getAttribute('data-motion');
+    return m ? m !== 'full' : mqReduce.matches;
+  };
 
   const parties = D.parties;
   const byId = Object.fromEntries(parties.map((p) => [p.id, p]));
+
+  /* Цвета партий — CSS-переменные со своими значениями для светлой и тёмной
+     темы. Дальше везде используется var(--p-<id>), поэтому при смене темы
+     перекрашиваются и точки, и диаграммы. Исходный hex остаётся в p.hex. */
+  (function partyColors() {
+    const light = parties.map((p) => `--p-${p.id}:${p.color}`).join(';');
+    const dark = parties.map((p) => `--p-${p.id}:${p.colorDark || p.color}`).join(';');
+    const css =
+      `:root{${light}}` +
+      `@media (prefers-color-scheme: dark){:root:not([data-theme='light']){${dark}}}` +
+      `:root[data-theme='dark']{${dark}}`;
+    const style = document.createElement('style');
+    style.id = 'bpcPartyColors';
+    style.textContent = css;
+    document.head.appendChild(style);
+    parties.forEach((p) => {
+      p.hex = p.color;
+      p.color = `var(--p-${p.id})`;
+    });
+  })();
   const axisById = Object.fromEntries(D.axes.map((a) => [a.id, a]));
 
   /* ---------- Утилиты ---------- */
@@ -34,7 +63,7 @@
   const similarity = (a, b) => Math.round((1 - distance(a, b) / MAX_DIST) * 100);
 
   function countUp(el, to, dur = 1400) {
-    if (reduced) {
+    if (noMotion()) {
       el.textContent = to;
       return;
     }
@@ -48,25 +77,16 @@
     requestAnimationFrame(step);
   }
 
+  // storage(key) — прочитать, storage(key, val) — записать, storage(key, null) — удалить
   function storage(key, val) {
     try {
       if (val === undefined) return localStorage.getItem(key);
+      if (val === null) return localStorage.removeItem(key);
       localStorage.setItem(key, val);
     } catch (e) {
       return null;
     }
   }
-
-  /* ---------- Тема ---------- */
-  const root = document.documentElement;
-  const mqDark = window.matchMedia('(prefers-color-scheme: dark)');
-  const currentTheme = () => root.getAttribute('data-theme') || (mqDark.matches ? 'dark' : 'light');
-
-  $('#themeToggle').addEventListener('click', () => {
-    const next = currentTheme() === 'dark' ? 'light' : 'dark';
-    root.setAttribute('data-theme', next);
-    storage('bpc-theme', next);
-  });
 
   /* ---------- Навигация ---------- */
   const nav = $('#nav');
@@ -108,7 +128,7 @@
       : null;
 
   function onApproach(el, play) {
-    if (!el || reduced || !approachObs) return;
+    if (!el || noMotion() || !approachObs) return;
     el.__bpcPlay = play;
     approachObs.observe(el);
   }
@@ -126,22 +146,13 @@
         el.style.setProperty('--d', i * 0.08 + 's');
       }
       // Блоки первого экрана прячем сразу, чтобы их появление было частью загрузки
-      if (!reduced && approachObs && el.getBoundingClientRect().top < window.innerHeight) el.classList.add('is-prep');
+      if (!noMotion() && approachObs && el.getBoundingClientRect().top < window.innerHeight) el.classList.add('is-prep');
       onApproach(el, () => replay(el));
     });
   }
 
   // Страховка: что бы ни случилось с наблюдателем, через 1,5 с всё видно
   setTimeout(() => $$('.is-prep').forEach((el) => el.classList.remove('is-prep')), 1500);
-
-  /* Подсветка-прожектор, следующая за курсором */
-  function spotlight(el) {
-    el.addEventListener('pointermove', (e) => {
-      const r = el.getBoundingClientRect();
-      el.style.setProperty('--mx', e.clientX - r.left + 'px');
-      el.style.setProperty('--my', e.clientY - r.top + 'px');
-    });
-  }
 
   /* ---------- Hero ---------- */
   $$('[data-updated]').forEach((el) => (el.textContent = D.updated));
@@ -185,7 +196,7 @@
     const box = $('#heroStrip');
     if (!box) return;
     const P = D.parliament;
-    const groups = P.order.map((id) => byId[id]).concat({ short: 'Беспартийные', color: '#8E8E93', seats: P.nonPartisan });
+    const groups = P.order.map((id) => byId[id]).concat({ short: 'Беспартийные', color: 'var(--np)', seats: P.nonPartisan });
     const cells = groups.map((g) => `<span style="--c:${g.color};flex:${g.seats}"></span>`).join('');
     box.innerHTML = `
       <div class="strip__head">
@@ -243,7 +254,6 @@
 
   const cards = $$('.pcard', list);
   cards.forEach((c) => {
-    spotlight(c);
     c.addEventListener('click', () => openParty(c.dataset.id));
     c.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
@@ -317,7 +327,7 @@
     rot += 180; // всегда в одну сторону — слева направо
     onBack = !onBack;
     inner.style.transform = `rotateY(${rot}deg)`;
-    if (reduced || !inner.animate) return;
+    if (noMotion() || !inner.animate) return;
     flip.classList.remove('is-turning');
     void flip.offsetWidth;
     flip.classList.add('is-turning');
@@ -345,7 +355,7 @@
     // На мобильных — показать карточку
     const r = flip.getBoundingClientRect();
     if (r.top < 0 || r.top > window.innerHeight * 0.6) {
-      flip.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+      flip.scrollIntoView({ behavior: noMotion() ? 'auto' : 'smooth', block: 'start' });
     }
   }
 
@@ -616,15 +626,15 @@
   selX.value = ax0;
   selY.value = ay0;
   function syncHints() {
-    selX.hint(selY.value, 'ось Y');
-    selY.hint(selX.value, 'ось X');
+    selX.hint(selY.value, 'по вертикали');
+    selY.hint(selX.value, 'по горизонтали');
   }
   syncHints();
 
   // Сетка
   (function drawGrid() {
     const svg = $('#grid');
-    let s = '<rect x="0" y="0" width="100" height="100" rx="3.6" ry="3.6"/>';
+    let s = '<rect x="0" y="0" width="100" height="100" rx="1.3" ry="1.3"/>';
     for (let i = 1; i < 20; i++) {
       const v = i * 5;
       if (v === 50) continue;
@@ -835,7 +845,7 @@
       return pts.map(() => [cx, cy]);
     };
     const from = { gov: prev.gov || collapse(next.gov), opp: prev.opp || collapse(next.opp) };
-    const dur = reduced ? 1 : 1000;
+    const dur = noMotion() ? 1 : 1000;
     const t0 = performance.now();
     const frame = (t) => {
       const k = Math.min(1, (t - t0) / dur);
@@ -936,7 +946,7 @@
       tooltip.classList.remove('is-on');
       if (d.dataset.id === 'me') {
         const q = $('#quiz');
-        if (q) q.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+        if (q) q.scrollIntoView({ behavior: noMotion() ? 'auto' : 'smooth', block: 'start' });
       } else {
         openParty(d.dataset.id);
       }
@@ -944,10 +954,22 @@
   });
 
   let rz;
-  window.addEventListener('resize', () => {
+  const relayout = () => {
     clearTimeout(rz);
     rz = setTimeout(() => renderCompass(false), 150);
-  });
+  };
+  window.addEventListener('resize', relayout);
+  // Размер текста меняет ширину подписей — пересчитываем раскладку точек
+  document.addEventListener('bpc:settings', relayout);
+
+  function resetAxes() {
+    selX.value = 'vector';
+    selY.value = 'power';
+    storage('bpc-ax', selX.value);
+    storage('bpc-ay', selY.value);
+    syncHints();
+    renderCompass(true);
+  }
 
   /* Анимация осей сетки при появлении */
   onApproach(plane, () => $('#grid').classList.add('is-in'));
@@ -955,7 +977,6 @@
   /* ---------- Старт ---------- */
   renderCompass(false);
   observeReveal();
-  $$('.card').forEach(spotlight);
 
   /* Результат теста на компасе */
   function setMe(pos) {
@@ -969,13 +990,38 @@
     if (!me) return;
     toggleMe.checked = true;
     renderCompass(false);
-    $('#compass').scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+    $('#compass').scrollIntoView({ behavior: noMotion() ? 'auto' : 'smooth', block: 'start' });
     const d = dots.find((x) => x.dataset.id === 'me');
     d.classList.remove('is-flash');
     void d.offsetWidth;
     d.classList.add('is-flash');
   }
 
-  /* Публичный API для charts.js и quiz.js */
-  window.BPCApp = { setMe, showMeOnCompass, storage, axisById, fmt1, onApproach, replay, openParty, setHover, plural, seatWord, fmt, similarity, byId, observeReveal, spotlight, countUp, initSeg, reduced };
+  /* Строка для цитирования в разделе «О проекте» */
+  const citeBtn = $('#citeCopy');
+  if (citeBtn) {
+    citeBtn.addEventListener('click', async () => {
+      const msg = $('#citeMsg');
+      try {
+        await navigator.clipboard.writeText($('#citeText').textContent.trim());
+        msg.textContent = 'Скопировано';
+      } catch (e) {
+        // Буфер обмена недоступен — выделяем текст, чтобы скопировать вручную
+        const range = document.createRange();
+        range.selectNodeContents($('#citeText'));
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        msg.textContent = 'Выделено — нажмите Ctrl+C';
+      }
+      setTimeout(() => (msg.textContent = ''), 3000);
+    });
+  }
+
+  /* Публичный API для charts.js, quiz.js, settings.js и tour.js */
+  window.BPCApp = { setMe, showMeOnCompass, resetAxes, closeMenu: () => setMenu(false), storage, axisById, fmt1, onApproach, replay, openParty, setHover, plural, seatWord, fmt, similarity, byId, observeReveal, countUp, initSeg, noMotion,
+    get reduced() {
+      return noMotion();
+    },
+  };
 })();

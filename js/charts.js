@@ -1,5 +1,5 @@
 /* ==========================================================================
-   BelPolitCompass · Alpha 0.1 — графики и диаграммы (чистый SVG, без библиотек)
+   BelPolitCompass · Alpha 0.3 — графики и диаграммы (чистый SVG, без библиотек)
    ========================================================================== */
 (function () {
   'use strict';
@@ -11,7 +11,7 @@
   const NS = 'http://www.w3.org/2000/svg';
   const parties = D.parties;
   const byId = A.byId;
-  const NONPARTISAN = { id: 'np', short: 'Беспартийные', color: '#8E8E93', seats: D.parliament.nonPartisan };
+  const NONPARTISAN = { id: 'np', short: 'Беспартийные', color: 'var(--np)', seats: D.parliament.nonPartisan };
 
   /* Все графики сразу рисуются в финальном виде; анимация появления
      проигрывается, когда блок подъезжает к экрану (см. onApproach в app.js) */
@@ -67,7 +67,7 @@
       seats
         .map(
           (s, i) =>
-            `<circle class="seat" data-g="${s.g.id}" data-i="${i}" cx="${s.x.toFixed(2)}" cy="${s.y.toFixed(2)}" r="3.9" fill="${s.g.color}"><title>${s.g.short}</title></circle>`
+            `<circle class="seat" data-g="${s.g.id}" data-i="${i}" cx="${s.x.toFixed(2)}" cy="${s.y.toFixed(2)}" r="3.9" style="fill:${s.g.color}"><title>${s.g.short}</title></circle>`
         )
         .join('') +
       `<text class="hemi__center" x="100" y="92" text-anchor="middle" font-size="22">${total}</text>` +
@@ -142,7 +142,7 @@
           ${segs
             .map(
               (s) =>
-                `<circle class="donut__seg" data-g="${s.g.id}" cx="50" cy="50" r="${r}" stroke="${s.g.color}" stroke-dasharray="${s.len} ${C}" stroke-dashoffset="${-s.start}"/>`
+                `<circle class="donut__seg" data-g="${s.g.id}" cx="50" cy="50" r="${r}" style="stroke:${s.g.color}" stroke-dasharray="${s.len} ${C}" stroke-dashoffset="${-s.start}"/>`
             )
             .join('')}
         </svg>
@@ -210,9 +210,9 @@
     };
     const items = [
       { n: br.seats, small: '', label: `${A.seatWord(br.seats)} у «Белой Руси» — ${Math.round((br.seats / 110) * 100)}% палаты`, c: br.color, i: icons.seat },
-      { n: D.parliament.nonPartisan, small: '', label: 'беспартийных депутатов', c: '#8E8E93', i: icons.user },
-      { n: parties.filter((p) => p.status !== 'active').length, small: '', label: 'партий ликвидированы или не зарегистрированы', c: '#FF453A', i: icons.off },
-      { n: avgSim, small: '%', label: 'среднее сходство провластных и оппозиционных партий', c: '#BF5AF2', i: icons.link },
+      { n: D.parliament.nonPartisan, small: '', label: 'беспартийных депутатов', c: 'var(--np)', i: icons.user },
+      { n: parties.filter((p) => p.status !== 'active').length, small: '', label: 'партий ликвидированы или не зарегистрированы', c: 'var(--red)', i: icons.off },
+      { n: avgSim, small: '%', label: 'среднее сходство провластных и оппозиционных партий', c: 'var(--accent)', i: icons.link },
     ];
     const box = $('#statCards');
     box.innerHTML = items
@@ -355,8 +355,8 @@
       const p = byId[id];
       const grp = document.createElementNS(NS, 'g');
       grp.innerHTML =
-        `<polygon class="radar__poly" fill="${p.color}" fill-opacity="0.16" stroke="${p.color}"/>` +
-        axes.map(() => `<circle class="radar__pt" r="4.5" fill="${p.color}"/>`).join('');
+        `<polygon class="radar__poly" style="fill:${p.color};stroke:${p.color}" fill-opacity="0.12"/>` +
+        axes.map(() => `<circle class="radar__pt" r="4" style="fill:${p.color}"/>`).join('');
       layer.appendChild(grp);
       const shape = { grp, poly: grp.firstChild, dots: $$('circle', grp), pts: center() };
       shapes[id] = shape;
@@ -418,8 +418,8 @@
      ========================================================================== */
   (function campGap() {
     const box = $('#gap');
-    const GOV = '#0A84FF';
-    const OPP = '#FF9F0A';
+    const GOV = 'var(--gov)';
+    const OPP = 'var(--opp)';
     const avg = (camp, ax) => {
       const ps = parties.filter((p) => p.camp === camp);
       return ps.reduce((s, p) => s + p.pos[ax], 0) / ps.length;
@@ -517,7 +517,7 @@
      ========================================================================== */
   (function timeline() {
     const tl = $('#tl');
-    const tones = { gov: '#0A84FF', opp: '#FF9F0A', neutral: '#BF5AF2' };
+    const tones = { gov: 'var(--gov)', opp: 'var(--opp)', neutral: 'var(--np)' };
     tl.insertAdjacentHTML(
       'beforeend',
       D.timeline
@@ -560,17 +560,11 @@
       identity:
         '<svg viewBox="0 0 24 24"><path d="M12 2l3 7 7 3-7 3-3 7-3-7-7-3 7-3z"/></svg>',
     };
-    const grads = {
-      vector: ['#64D2FF', '#0A84FF'],
-      power: ['#FF9F0A', '#FF453A'],
-      economy: ['#30D158', '#00C7BE'],
-      identity: ['#BF5AF2', '#5E5CE6'],
-    };
     const grid = $('#methodGrid');
     grid.innerHTML = D.axes
       .map(
         (a, i) => `
-      <article class="mcard glass reveal" style="--c1:${grads[a.id][0]};--c2:${grads[a.id][1]};--d:${i * 0.08}s">
+      <article class="mcard glass reveal" style="--d:${i * 0.08}s">
         <span class="mcard__icon">${icons[a.id]}</span>
         <h3>${a.name}</h3>
         <p>${a.about}</p>
@@ -582,6 +576,5 @@
       )
       .join('');
     A.observeReveal(grid);
-    $$('.mcard', grid).forEach(A.spotlight);
   })();
 })();
