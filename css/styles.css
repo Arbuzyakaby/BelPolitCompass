@@ -221,7 +221,7 @@ svg {
 /* ---------- Навигация ---------- */
 .nav {
   position: sticky;
-  top: 0;
+  top: env(safe-area-inset-top, 0px);
   z-index: 50;
   transition: background-color 0.4s var(--ease), border-color 0.4s var(--ease);
   border-bottom: 1px solid transparent;
@@ -609,15 +609,16 @@ svg {
 
 /* ---------- Появление при прокрутке ---------- */
 .reveal {
-  opacity: 0;
-  transform: translateY(28px) scale(0.985);
   transition: opacity 0.9s var(--ease), transform 0.9s var(--ease);
   transition-delay: var(--d, 0s);
 }
 
-.reveal.is-in {
-  opacity: 1;
-  transform: none;
+/* Контент виден в покое; перед появлением на экране блок на мгновение
+   «прячется» (ещё за пределами экрана) и плавно въезжает */
+.reveal.is-prep {
+  opacity: 0;
+  transform: translateY(28px) scale(0.985);
+  transition: none;
 }
 
 /* ---------- Рабочая область ---------- */
@@ -743,6 +744,13 @@ svg {
 
 .card__head .seg--sm {
   margin: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.card__head .seg--sm::-webkit-scrollbar {
+  display: none;
 }
 
 .seg__btn {
@@ -1520,14 +1528,16 @@ svg {
 
 .compass__grid line.draw {
   stroke-dasharray: 100;
-  stroke-dashoffset: 100;
 }
 
 .compass__grid.is-in line.draw {
-  animation: draw 1.4s var(--ease) forwards;
+  animation: draw 1.4s var(--ease) both;
 }
 
 @keyframes draw {
+  from {
+    stroke-dashoffset: 100;
+  }
   to {
     stroke-dashoffset: 0;
   }
@@ -1947,15 +1957,14 @@ svg {
 .seat {
   transform-box: fill-box;
   transform-origin: center;
-  transform: scale(0);
-  opacity: 0;
   transition: transform 0.6s var(--ease-spring), opacity 0.4s, filter 0.3s;
   cursor: pointer;
 }
 
-.is-in .seat {
-  transform: scale(1);
-  opacity: 1;
+.is-prep .seat {
+  transform: scale(0);
+  opacity: 0;
+  transition: none;
 }
 
 .hemi.has-focus .seat:not(.is-focus) {
@@ -2501,15 +2510,20 @@ svg {
   aspect-ratio: 1;
   border-radius: 4px;
   background: color-mix(in srgb, var(--accent) calc(var(--v) * 100%), var(--surface-2));
-  transform: scale(0);
   transition: transform 0.5s var(--ease-spring), outline-color 0.2s;
   transition-delay: calc(var(--d) * 12ms);
   outline: 1.5px solid transparent;
   cursor: crosshair;
 }
 
-.is-in .mx-c {
-  transform: scale(1);
+.is-prep .mx-c {
+  transform: scale(0);
+  transition: none;
+}
+
+.no-trans,
+.no-trans * {
+  transition: none !important;
 }
 
 .mx-c:hover {
@@ -2952,7 +2966,7 @@ svg {
     grid-column: auto;
   }
   .card--stats {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .footer__inner {
     grid-template-columns: 1fr 1fr;
@@ -3056,8 +3070,33 @@ svg {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  .reveal {
+  .reveal.is-prep {
     opacity: 1;
     transform: none;
+  }
+}
+
+/* Совсем узкие экраны (iPhone SE и т. п.) */
+@media (max-width: 380px) {
+  .nav__actions .pill--version {
+    display: none;
+  }
+  .brand {
+    font-size: 16px;
+  }
+  .stat {
+    padding: 20px 14px;
+  }
+  .stat__spark {
+    display: none;
+  }
+  .hero__stats {
+    gap: 8px;
+  }
+  .card {
+    padding: 18px 14px;
+  }
+  .card--stats {
+    padding: 0;
   }
 }

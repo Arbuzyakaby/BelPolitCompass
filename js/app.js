@@ -87,26 +87,52 @@
   $$('main .section').forEach((s) => sectionObs.observe(s));
   sectionObs.observe($('.hero')); // у hero нет id — подсветка снимается
 
-  /* ---------- Появление при прокрутке ---------- */
-  const revealObs = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((en) => {
-        if (en.isIntersecting) {
-          en.target.classList.add('is-in');
-          revealObs.unobserve(en.target);
-        }
-      });
-    },
-    { threshold: 0.12, rootMargin: '0px 0px -40px 0px' }
-  );
+  /* ---------- Анимации появления ----------
+     Весь контент виден сразу (в покое страница полная). Когда блок
+     приближается к экрану (ещё за его нижним краем), он сбрасывается
+     в начальное состояние и проигрывает анимацию появления. */
+  const approachObs =
+    'IntersectionObserver' in window
+      ? new IntersectionObserver(
+          (entries) => {
+            entries.forEach((en) => {
+              if (!en.isIntersecting) return;
+              approachObs.unobserve(en.target);
+              const fn = en.target.__bpcPlay;
+              delete en.target.__bpcPlay;
+              if (fn) fn();
+            });
+          },
+          { rootMargin: '0px 0px 20% 0px', threshold: 0 }
+        )
+      : null;
+
+  function onApproach(el, play) {
+    if (!el || reduced || !approachObs) return;
+    el.__bpcPlay = play;
+    approachObs.observe(el);
+  }
+
+  // Сброс без анимации → следующий кадр → анимация к состоянию покоя
+  function replay(el, cls = 'is-prep') {
+    el.classList.add(cls);
+    void el.offsetWidth;
+    requestAnimationFrame(() => el.classList.remove(cls));
+  }
+
   function observeReveal(scope = document) {
     $$('.reveal', scope).forEach((el, i) => {
       if (!el.style.getPropertyValue('--d') && el.parentElement && el.parentElement.classList.contains('hero')) {
         el.style.setProperty('--d', i * 0.08 + 's');
       }
-      revealObs.observe(el);
+      // Блоки первого экрана прячем сразу, чтобы их появление было частью загрузки
+      if (!reduced && approachObs && el.getBoundingClientRect().top < window.innerHeight) el.classList.add('is-prep');
+      onApproach(el, () => replay(el));
     });
   }
+
+  // Страховка: что бы ни случилось с наблюдателем, через 1,5 с всё видно
+  setTimeout(() => $$('.is-prep').forEach((el) => el.classList.remove('is-prep')), 1500);
 
   /* Подсветка-прожектор, следующая за курсором */
   function spotlight(el) {
@@ -127,16 +153,9 @@
     { n: D.axes.length, label: 'оси белорусской политики' },
   ];
   $('#heroStats').innerHTML = heroStats
-    .map((s) => `<div class="hstat"><div class="hstat__num" data-count="${s.n}">0</div><div class="hstat__label">${s.label}</div></div>`)
+    .map((s) => `<div class="hstat"><div class="hstat__num" data-count="${s.n}">${s.n}</div><div class="hstat__label">${s.label}</div></div>`)
     .join('');
-  const heroObs = new IntersectionObserver((entries) => {
-    entries.forEach((en) => {
-      if (!en.isIntersecting) return;
-      $$('[data-count]', en.target).forEach((el) => countUp(el, +el.dataset.count));
-      heroObs.disconnect();
-    });
-  });
-  heroObs.observe($('#heroStats'));
+  onApproach($('#heroStats'), () => $$('[data-count]', $('#heroStats')).forEach((el) => countUp(el, +el.dataset.count)));
 
   /* ==========================================================================
      Сайдбар: список партий (лицевая сторона)
@@ -755,15 +774,7 @@
   });
 
   /* Анимация осей сетки при появлении */
-  const gridObs = new IntersectionObserver((entries) => {
-    entries.forEach((en) => {
-      if (en.isIntersecting) {
-        $('#grid').classList.add('is-in');
-        gridObs.disconnect();
-      }
-    });
-  });
-  gridObs.observe(plane);
+  onApproach(plane, () => $('#grid').classList.add('is-in'));
 
   /* ---------- Старт ---------- */
   renderCompass(false);
@@ -771,5 +782,5 @@
   $$('.card').forEach(spotlight);
 
   /* Публичный API для charts.js */
-  window.BPCApp = { openParty, setHover, plural, seatWord, fmt, similarity, byId, observeReveal, spotlight, countUp, initSeg, reduced };
+  window.BPCApp = { onApproach, replay, openParty, setHover, plural, seatWord, fmt, similarity, byId, observeReveal, spotlight, countUp, initSeg, reduced };
 })();

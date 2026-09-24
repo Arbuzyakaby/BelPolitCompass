@@ -13,21 +13,10 @@
   const byId = A.byId;
   const NONPARTISAN = { id: 'np', short: 'Беспартийные', color: '#8E8E93', seats: D.parliament.nonPartisan };
 
-  /* Запуск анимации, когда элемент попадает в зону видимости */
-  function onVisible(el, fn, threshold = 0.25) {
-    const obs = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((en) => {
-          if (en.isIntersecting) {
-            fn();
-            obs.disconnect();
-          }
-        });
-      },
-      { threshold }
-    );
-    obs.observe(el);
-  }
+  /* Все графики сразу рисуются в финальном виде; анимация появления
+     проигрывается, когда блок подъезжает к экрану (см. onApproach в app.js) */
+  const onVisible = A.onApproach;
+  const reflow = (el) => void el.offsetWidth;
 
   const ease = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
 
@@ -78,7 +67,7 @@
       seats
         .map(
           (s, i) =>
-            `<circle class="seat" data-g="${s.g.id}" cx="${s.x.toFixed(2)}" cy="${s.y.toFixed(2)}" r="3.9" fill="${s.g.color}" style="transition-delay:${(i * 9).toFixed(0)}ms"><title>${s.g.short}</title></circle>`
+            `<circle class="seat" data-g="${s.g.id}" data-i="${i}" cx="${s.x.toFixed(2)}" cy="${s.y.toFixed(2)}" r="3.9" fill="${s.g.color}"><title>${s.g.short}</title></circle>`
         )
         .join('') +
       `<text class="hemi__center" x="100" y="92" text-anchor="middle" font-size="22">${total}</text>` +
@@ -116,9 +105,11 @@
     document.addEventListener('bpc:hover', (e) => focus(e.detail && byId[e.detail] && byId[e.detail].seats ? e.detail : null));
 
     onVisible(box, () => {
-      box.classList.add('is-in');
+      const els = $$('.seat', svg);
+      els.forEach((c) => (c.style.transitionDelay = c.dataset.i * 9 + 'ms'));
+      A.replay(box);
       // После появления убираем задержки, чтобы подсветка реагировала мгновенно
-      setTimeout(() => $$('.seat', svg).forEach((c) => (c.style.transitionDelay = '0ms')), seats.length * 9 + 700);
+      setTimeout(() => els.forEach((c) => (c.style.transitionDelay = '')), seats.length * 9 + 700);
     });
   })();
 
@@ -151,11 +142,11 @@
           ${segs
             .map(
               (s) =>
-                `<circle class="donut__seg" data-g="${s.g.id}" cx="50" cy="50" r="${r}" stroke="${s.g.color}" stroke-dasharray="0 ${C}" stroke-dashoffset="${-s.start}"/>`
+                `<circle class="donut__seg" data-g="${s.g.id}" cx="50" cy="50" r="${r}" stroke="${s.g.color}" stroke-dasharray="${s.len} ${C}" stroke-dashoffset="${-s.start}"/>`
             )
             .join('')}
         </svg>
-        <div class="donut__center"><div><b data-n="${total}">0</b><span>мест всего</span></div></div>
+        <div class="donut__center"><div><b data-n="${total}">${total}</b><span>мест всего</span></div></div>
       </div>
       <div class="donut__list">
         ${groups
@@ -184,8 +175,12 @@
     });
 
     onVisible(box, () => {
+      box.classList.add('no-trans');
+      segEls.forEach((el) => el.setAttribute('stroke-dasharray', `0 ${C}`));
+      reflow(box);
+      box.classList.remove('no-trans');
       segEls.forEach((el, i) => {
-        setTimeout(() => el.setAttribute('stroke-dasharray', `${segs[i].len} ${C}`), i * 140);
+        setTimeout(() => el.setAttribute('stroke-dasharray', `${segs[i].len} ${C}`), 60 + i * 140);
       });
       A.countUp(center, total, 1200);
     });
@@ -223,7 +218,7 @@
     box.innerHTML = items
       .map(
         (s) =>
-          `<div class="stat" style="--c:${s.c}"><span class="stat__spark">${s.i}</span><div class="stat__num"><span data-n="${s.n}">0</span><small>${s.small}</small></div><div class="stat__label">${s.label}</div></div>`
+          `<div class="stat" style="--c:${s.c}"><span class="stat__spark">${s.i}</span><div class="stat__num"><span data-n="${s.n}">${s.n}</span><small>${s.small}</small></div><div class="stat__label">${s.label}</div></div>`
       )
       .join('');
     onVisible(box, () => $$('[data-n]', box).forEach((el) => A.countUp(el, +el.dataset.n)));
@@ -238,7 +233,7 @@
     const sub = $('#barsSub');
     const ROW = 30;
     let axis = 'vector';
-    let visible = false;
+    let visible = true;
 
     tabs.insertAdjacentHTML(
       'afterbegin',
@@ -290,8 +285,13 @@
     });
     render();
     onVisible(box, () => {
-      visible = true;
+      box.classList.add('no-trans');
+      visible = false;
       render();
+      reflow(box);
+      box.classList.remove('no-trans');
+      visible = true;
+      requestAnimationFrame(render);
     });
   })();
 
@@ -351,7 +351,7 @@
       shape.raf = requestAnimationFrame(frame);
     }
 
-    function addShape(id) {
+    function addShape(id, instant) {
       const p = byId[id];
       const grp = document.createElementNS(NS, 'g');
       grp.innerHTML =
@@ -360,7 +360,16 @@
       layer.appendChild(grp);
       const shape = { grp, poly: grp.firstChild, dots: $$('circle', grp), pts: center() };
       shapes[id] = shape;
-      tween(shape, target(p));
+      if (instant) {
+        shape.pts = target(p);
+        shape.poly.setAttribute('points', shape.pts.map((q) => q.join(',')).join(' '));
+        shape.dots.forEach((d, i) => {
+          d.setAttribute('cx', shape.pts[i][0]);
+          d.setAttribute('cy', shape.pts[i][1]);
+        });
+      } else {
+        tween(shape, target(p));
+      }
     }
 
     function removeShape(id) {
@@ -394,7 +403,14 @@
       }
     });
 
-    onVisible(box, () => selected.forEach(addShape));
+    selected.forEach((id) => addShape(id, true));
+    onVisible(box, () =>
+      selected.forEach((id) => {
+        const sh = shapes[id];
+        sh.pts = center();
+        tween(sh, target(byId[id]));
+      })
+    );
   })();
 
   /* ==========================================================================
@@ -438,18 +454,23 @@
         `и провластные, и часть оппозиционных партий поддерживают социальное государство.</div>`
     );
 
+    const place = (row, rest) => {
+      const g = rest ? 50 : pct(+row.dataset.g);
+      const o = rest ? 50 : pct(+row.dataset.o);
+      $('[data-pin="g"]', row).style.left = g + '%';
+      $('[data-pin="o"]', row).style.left = o + '%';
+      const span = $('.gaprow__span', row);
+      span.style.left = Math.min(g, o) + '%';
+      span.style.width = Math.abs(g - o) + '%';
+    };
+    const rows = $$('.gaprow', box);
+    rows.forEach((row) => place(row));
     onVisible(box, () => {
-      $$('.gaprow', box).forEach((row, i) => {
-        setTimeout(() => {
-          const g = pct(+row.dataset.g);
-          const o = pct(+row.dataset.o);
-          $('[data-pin="g"]', row).style.left = g + '%';
-          $('[data-pin="o"]', row).style.left = o + '%';
-          const span = $('.gaprow__span', row);
-          span.style.left = Math.min(g, o) + '%';
-          span.style.width = Math.abs(g - o) + '%';
-        }, i * 150);
-      });
+      box.classList.add('no-trans');
+      rows.forEach((row) => place(row, true));
+      reflow(box);
+      box.classList.remove('no-trans');
+      rows.forEach((row, i) => setTimeout(() => place(row), 60 + i * 150));
     });
   })();
 
@@ -488,7 +509,7 @@
       const cell = e.target.closest('.mx-c');
       if (cell) A.openParty(cell.dataset.b);
     });
-    onVisible(box, () => box.classList.add('is-in'), 0.15);
+    onVisible(box, () => A.replay(box));
   })();
 
   /* ==========================================================================
