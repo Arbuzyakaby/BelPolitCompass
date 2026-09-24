@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>BelPolitCompass — политический компас Беларуси</title>
+  <meta name="description" content="Интерактивный политический компас белорусских партий: четыре оси, карточки партий, парламент и аналитика." />
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)" />
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <script>
+    // Тема применяется до отрисовки, чтобы не было вспышки
+    (function () {
+      try {
+        var t = localStorage.getItem('bpc-theme');
+        if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body>
+  <div class="aurora" aria-hidden="true">
+    <span class="aurora__blob aurora__blob--a"></span>
+    <span class="aurora__blob aurora__blob--b"></span>
+    <span class="aurora__blob aurora__blob--c"></span>
+  </div>
+
+  <!-- ─────────── Навигация ─────────── -->
+  <header class="nav" id="nav">
+    <div class="nav__inner">
+      <a class="brand" href="#top" aria-label="BelPolitCompass — на главную">
+        <span class="brand__mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2" opacity=".35"/><path d="M16 5l3.2 11L16 27l-3.2-11z" fill="currentColor"/><circle cx="16" cy="16" r="2.2" fill="var(--bg)"/></svg>
+        </span>
+        <span class="brand__name">BelPolit<b>Compass</b></span>
+      </a>
+      <nav class="nav__links" aria-label="Разделы">
+        <a href="#compass">Компас</a>
+        <a href="#analytics">Аналитика</a>
+        <a href="#timeline">Хронология</a>
+        <a href="#method">Методология</a>
+      </nav>
+      <div class="nav__actions">
+        <span class="pill pill--version">Alpha 0.1</span>
+        <button class="icon-btn" id="themeToggle" type="button" aria-label="Сменить тему">
+          <svg class="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><g stroke-linecap="round"><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></g></svg>
+          <svg class="i-moon" viewBox="0 0 24 24"><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="top">
+    <!-- ─────────── Hero ─────────── -->
+    <section class="hero">
+      <div class="hero__eyebrow reveal">
+        <span class="dot-live"></span> Интерактивное исследование · обновлено <span data-updated></span>
+      </div>
+      <h1 class="hero__title reveal">
+        Политический компас<br /><span class="gradient-text">Беларуси</span>
+      </h1>
+      <p class="hero__lead reveal">
+        Четыре оси, созданные специально для белорусского контекста: вектор, власть, экономика и идентичность.
+        Четырнадцать партий — действующих, ликвидированных и так и не зарегистрированных.
+      </p>
+      <div class="hero__cta reveal">
+        <a class="btn btn--primary" href="#compass">Открыть компас</a>
+        <a class="btn btn--ghost" href="#method">Как это устроено</a>
+      </div>
+      <div class="hero__stats reveal" id="heroStats"></div>
+      <div class="hero__scroll" aria-hidden="true"><span></span></div>
+    </section>
+
+    <!-- ─────────── Компас + сайдбар ─────────── -->
+    <section class="section" id="compass">
+      <div class="section__head reveal">
+        <span class="section__kicker">01 · Компас</span>
+        <h2 class="section__title">Кто где стоит</h2>
+        <p class="section__lead">Выберите любые две оси. Нажмите на партию в списке или на точку — карточка перевернётся.</p>
+      </div>
+
+      <div class="workspace">
+        <!-- Сайдбар-карта -->
+        <aside class="flip reveal" id="flip" aria-label="Партии">
+          <div class="flip__inner" id="flipInner">
+            <!-- Лицевая сторона: список -->
+            <div class="flip__face flip__front glass">
+              <div class="sb-head">
+                <div class="sb-head__title">Партии · мандаты в ПП · <span class="muted">VIII созыв</span></div>
+                <span class="count-badge" id="partyCount">14</span>
+              </div>
+              <div class="seg seg--sm" id="statusFilter" role="tablist" aria-label="Фильтр по статусу">
+                <button class="seg__btn is-active" data-filter="all" role="tab">Все</button>
+                <button class="seg__btn" data-filter="active" role="tab">Действующие</button>
+                <button class="seg__btn" data-filter="inactive" role="tab">Вне системы</button>
+                <span class="seg__glider"></span>
+              </div>
+              <ul class="party-list" id="partyList"></ul>
+            </div>
+            <!-- Обратная сторона: подробная карточка -->
+            <div class="flip__face flip__back glass" id="partyDetail" aria-live="polite"></div>
+          </div>
+        </aside>
+
+        <!-- Компас -->
+        <div class="compass-panel glass reveal">
+          <div class="compass-controls">
+            <label class="select">
+              <span class="select__label">Ось X</span>
+              <select id="axisX"></select>
+            </label>
+            <button class="icon-btn icon-btn--sm" id="swapAxes" type="button" aria-label="Поменять оси местами" title="Поменять оси">
+              <svg viewBox="0 0 24 24"><path d="M7 7h12l-3-3M17 17H5l3 3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <label class="select">
+              <span class="select__label">Ось Y</span>
+              <select id="axisY"></select>
+            </label>
+            <div class="compass-toggles">
+              <label class="switch"><input type="checkbox" id="toggleHulls" checked /><span class="switch__track"></span>Лагеря</label>
+              <label class="switch"><input type="checkbox" id="toggleInactive" checked /><span class="switch__track"></span>Вне системы</label>
+            </div>
+          </div>
+
+          <div class="compass" id="compassBox">
+            <div class="compass__plane" id="plane">
+              <div class="q q--tl"></div><div class="q q--tr"></div><div class="q q--bl"></div><div class="q q--br"></div>
+              <svg class="compass__grid" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" id="grid"></svg>
+              <svg class="compass__hulls" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" id="hulls"></svg>
+              <span class="corner corner--tl" id="cTL"></span>
+              <span class="corner corner--tr" id="cTR"></span>
+              <span class="corner corner--bl" id="cBL"></span>
+              <span class="corner corner--br" id="cBR"></span>
+              <div class="dots" id="dots"></div>
+              <div class="tooltip" id="tooltip" role="tooltip"></div>
+            </div>
+            <div class="axis-label axis-label--top" id="lblTop"></div>
+            <div class="axis-label axis-label--bottom" id="lblBottom"></div>
+            <div class="axis-label axis-label--left" id="lblLeft"></div>
+            <div class="axis-label axis-label--right" id="lblRight"></div>
+          </div>
+
+          <div class="compass-legend">
+            <span><i class="lg lg--gov"></i>Провластные</span>
+            <span><i class="lg lg--opp"></i>Оппозиционные</span>
+            <span><i class="lg lg--ring"></i>Пунктир — вне системы</span>
+            <span class="muted">Размер точки ∝ мандатам</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────── Аналитика ─────────── -->
+    <section class="section" id="analytics">
+      <div class="section__head reveal">
+        <span class="section__kicker">02 · Аналитика</span>
+        <h2 class="section__title">Цифры и диаграммы</h2>
+        <p class="section__lead">Парламент, распределение мандатов, сравнение партий и разрыв между лагерями.</p>
+      </div>
+
+      <div class="bento">
+        <article class="card glass card--hemi reveal">
+          <header class="card__head">
+            <div>
+              <h3 class="card__title">Палата представителей</h3>
+              <p class="card__sub">VIII созыв · избрана 25 февраля 2024 · 110 мест</p>
+            </div>
+          </header>
+          <div class="hemi" id="hemicycle"></div>
+          <div class="legend" id="hemiLegend"></div>
+        </article>
+
+        <article class="card glass card--donut reveal">
+          <header class="card__head">
+            <div>
+              <h3 class="card__title">Доли мандатов</h3>
+              <p class="card__sub">Партийные и беспартийные депутаты</p>
+            </div>
+          </header>
+          <div class="donut" id="donut"></div>
+        </article>
+
+        <article class="card glass card--stats reveal" id="statCards"></article>
+
+        <article class="card glass card--bars reveal">
+          <header class="card__head card__head--wrap">
+            <div>
+              <h3 class="card__title">Рейтинг по оси</h3>
+              <p class="card__sub" id="barsSub"></p>
+            </div>
+            <div class="seg seg--sm" id="barsTabs" role="tablist"><span class="seg__glider"></span></div>
+          </header>
+          <div class="dbars" id="dbars"></div>
+        </article>
+
+        <article class="card glass card--radar reveal">
+          <header class="card__head">
+            <div>
+              <h3 class="card__title">Сравнение партий</h3>
+              <p class="card__sub">Выберите до трёх партий</p>
+            </div>
+          </header>
+          <div class="radar" id="radar"></div>
+          <div class="chips" id="radarChips"></div>
+        </article>
+
+        <article class="card glass card--gap reveal">
+          <header class="card__head">
+            <div>
+              <h3 class="card__title">Разрыв между лагерями</h3>
+              <p class="card__sub">Средние позиции провластных и оппозиционных партий</p>
+            </div>
+          </header>
+          <div class="gap" id="gap"></div>
+        </article>
+
+        <article class="card glass card--matrix reveal">
+          <header class="card__head">
+            <div>
+              <h3 class="card__title">Матрица близости</h3>
+              <p class="card__sub">Чем ярче клетка, тем ближе партии по всем четырём осям</p>
+            </div>
+          </header>
+          <div class="matrix-wrap"><div class="matrix" id="matrix"></div></div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ─────────── Хронология ─────────── -->
+    <section class="section" id="timeline">
+      <div class="section__head reveal">
+        <span class="section__kicker">03 · Хронология</span>
+        <h2 class="section__title">Как менялась партийная система</h2>
+      </div>
+      <ol class="tl" id="tl"><span class="tl__line"><span class="tl__fill" id="tlFill"></span></span></ol>
+    </section>
+
+    <!-- ─────────── Методология ─────────── -->
+    <section class="section" id="method">
+      <div class="section__head reveal">
+        <span class="section__kicker">04 · Методология</span>
+        <h2 class="section__title">Почему именно эти оси</h2>
+        <p class="section__lead">Классический компас «лево-право × авторитаризм-либертарианство» плохо описывает Беларусь: здесь линии раскола проходят иначе.</p>
+      </div>
+      <div class="method" id="methodGrid"></div>
+      <div class="disclaimer glass reveal">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 8v5M12 16.5v.01" stroke-linecap="round"/></svg>
+        <p>
+          Позиции партий — <b>экспертная оценка</b> по шкале от −10 до +10 на основе программ, публичных заявлений и политической практики.
+          Это не официальная позиция самих партий. Проект носит образовательный характер и не агитирует ни за одну политическую силу.
+          Данные о мандатах — по итогам выборов в Палату представителей 2024 года.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <!-- ─────────── Футер ─────────── -->
+  <footer class="footer">
+    <div class="ornament" aria-hidden="true"></div>
+    <div class="footer__inner">
+      <div class="footer__brand">
+        <a class="brand brand--lg" href="#top">
+          <span class="brand__mark" aria-hidden="true">
+            <svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2" opacity=".35"/><path d="M16 5l3.2 11L16 27l-3.2-11z" fill="currentColor"/><circle cx="16" cy="16" r="2.2" fill="var(--bg)"/></svg>
+          </span>
+          <span class="brand__name">BelPolit<b>Compass</b></span>
+        </a>
+        <p class="footer__tag">Карта белорусской политики — без лозунгов, в четырёх измерениях.</p>
+        <div class="footer__badges">
+          <span class="pill pill--version">Alpha 0.1</span>
+          <span class="pill">14 партий</span>
+          <span class="pill">4 оси</span>
+        </div>
+      </div>
+      <nav class="footer__col" aria-label="Разделы">
+        <h4>Разделы</h4>
+        <a href="#compass">Компас</a>
+        <a href="#analytics">Аналитика</a>
+        <a href="#timeline">Хронология</a>
+        <a href="#method">Методология</a>
+      </nav>
+      <div class="footer__col">
+        <h4>Оси</h4>
+        <span>Восток ↔ Запад</span>
+        <span>Горизонталь ↔ Вертикаль</span>
+        <span>Госсектор ↔ Рынок</span>
+        <span>Советская ↔ Национальная</span>
+      </div>
+      <div class="footer__col">
+        <h4>Проект</h4>
+        <a href="https://github.com/Arbuzyakaby/BelPolitCompass" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/Arbuzyakaby/BelPolitCompass/blob/HEAD/CHANGELOG.md" target="_blank" rel="noopener">Список изменений</a>
+        <a href="#method">Об оценках</a>
+      </div>
+    </div>
+    <div class="footer__bottom">
+      <span>© 2026 BelPolitCompass. Образовательный проект.</span>
+      <span class="footer__made">Сделано с <span class="heart">♥</span> и открытым кодом</span>
+      <a class="to-top" href="#top" aria-label="Наверх">
+        <svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </div>
+  </footer>
+
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/charts.js"></script>
+</body>
+</html>

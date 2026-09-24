@@ -1,0 +1,20 @@
+# ОС
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Редакторы
+.vscode/
+.idea/
+*.swp
+*~
+
+# Зависимости и сборка (на будущее)
+node_modules/
+dist/
+.cache/
+
+# Логи и окружение
+*.log
+.env
+.env.*
