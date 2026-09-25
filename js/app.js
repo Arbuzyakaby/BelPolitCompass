@@ -1,5 +1,5 @@
 /* ==========================================================================
-   BelPolitCompass · Alpha 0.4 — компас, сайдбар-карта, общие утилиты
+   BelPolitCompass · Alpha 0.5 — компас, сайдбар-карта, общие утилиты
    ========================================================================== */
 (function () {
   'use strict';
@@ -68,6 +68,7 @@
       const e = 1 - Math.pow(1 - k, 4);
       el.textContent = Math.round(to * e);
       if (k < 1) requestAnimationFrame(step);
+      else document.dispatchEvent(new CustomEvent('bpc:counted', { detail: el }));
     };
     requestAnimationFrame(step);
   }

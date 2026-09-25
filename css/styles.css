@@ -1,5 +1,5 @@
 /* ==========================================================================
-   BelPolitCompass · Alpha 0.4
+   BelPolitCompass · Alpha 0.5
    Аналитическая дизайн-система: графитовая шкала, один тёмно-синий акцент,
    тонкие линии вместо стекла и теней, строгая типографика IBM Plex.
    ========================================================================== */
@@ -15,6 +15,8 @@
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-spring: cubic-bezier(0.3, 1.25, 0.6, 1);
   --ease-flip: cubic-bezier(0.65, 0, 0.35, 1);
+  /* --spring и --spring-soft — настоящие пружины в linear(), их задаёт js/fun.js.
+     Где браузер их не знает, везде подставляется обычная плавность. */
 
   --r-xs: 4px;
   --r-sm: 6px;
@@ -608,7 +610,7 @@ svg {
   border-radius: 50%;
   background: color-mix(in srgb, var(--c) 18%, var(--surface));
   box-shadow: inset 0 0 0 1.5px var(--c);
-  transition: transform 0.25s var(--ease);
+  transition: transform 0.4s var(--spring, var(--ease));
 }
 
 .mdot.is-active i {
@@ -989,7 +991,7 @@ svg {
   border-radius: var(--r-sm);
   background: var(--surface-solid);
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.1), 0 0 0 1px var(--stroke);
-  transition: transform 0.35s var(--ease), width 0.35s var(--ease), height 0.35s var(--ease);
+  transition: transform 0.5s var(--spring-soft, var(--ease)), width 0.5s var(--spring-soft, var(--ease)), height 0.35s var(--ease);
 }
 
 /* Список партий — по референсу */
@@ -1982,7 +1984,7 @@ svg {
   color: var(--text);
   outline: none;
   -webkit-tap-highlight-color: transparent;
-  transition: left 0.9s var(--ease), top 0.9s var(--ease), opacity 0.4s var(--ease);
+  transition: left 0.9s var(--spring, var(--ease)), top 0.9s var(--spring, var(--ease)), opacity 0.4s var(--ease);
   z-index: 1;
   cursor: pointer;
 }
@@ -2002,7 +2004,7 @@ svg {
   border-radius: 50%;
   background: var(--c);
   box-shadow: 0 0 0 2px var(--dot-ring), 0 1px 3px rgba(16, 24, 40, 0.25);
-  transition: transform 0.3s var(--ease), box-shadow 0.3s;
+  transition: transform 0.45s var(--spring, var(--ease)), box-shadow 0.3s;
   animation: dot-in 0.6s var(--ease) both;
   animation-delay: calc(var(--i) * 60ms + 300ms);
 }
@@ -3371,7 +3373,7 @@ svg {
   height: 100%;
   background: var(--accent);
   border-radius: inherit;
-  transition: width 0.5s var(--ease);
+  transition: width 0.6s var(--spring-soft, var(--ease));
 }
 
 .qz-q {
@@ -3659,7 +3661,7 @@ svg {
   border-radius: 50%;
   background: var(--text);
   box-shadow: 0 0 0 2px var(--surface);
-  transition: left 0.5s var(--ease);
+  transition: left 0.7s var(--spring, var(--ease));
 }
 
 .qbar__poles {
@@ -6750,7 +6752,10 @@ kbd {
   .hero__cta,
   .compass-controls,
   .toc,
-  .tts-btn {
+  .tts-btn,
+  .fern,
+  .fun-layer,
+  .fun-toast {
     display: none !important;
   }
   body {
@@ -6786,4 +6791,380 @@ kbd {
   .tl__card {
     break-inside: avoid;
   }
+}
+
+/* ==========================================================================
+   Alpha 0.5 — «душа»: физика и пасхалки с народными символами (js/fun.js)
+   Всё, что движется, живёт только при data-motion='full'; в остальных
+   режимах слои с полётами не создаются вовсе.
+   ========================================================================== */
+
+/* Стрелка в логотипе — маятник на JS; CSS-поворот при наведении ему не мешает */
+:root[data-motion='full'] .brand:hover .brand__mark {
+  transform: none;
+}
+
+/* Резинка на мини-компасе: палец тянет точку, а не страницу */
+:root[data-motion='full'] .mdot {
+  touch-action: none;
+}
+.mdot.is-pulled {
+  z-index: 3;
+  cursor: grabbing;
+}
+.mdot.is-pulled i {
+  transform: scale(1.18);
+}
+
+/* Подпись под выбором темы: что сейчас в системе */
+.set-hint {
+  display: block;
+  margin-top: 6px;
+  font-size: calc(12.5px * var(--fs));
+  color: var(--text-3);
+}
+
+/* ---------- Рушнік: орнамент в подвале разворачивается и меняет узор ---------- */
+.footer .ornament {
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  transform-origin: left center;
+}
+/* Васьміканцовая зорка */
+.footer .ornament[data-pattern='1'] {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='52' height='26' viewBox='0 0 52 26'%3E%3Cg fill='none' stroke='%23a8322d' stroke-width='1.6'%3E%3Cpath d='M8 8h10v10H8z'/%3E%3Cpath d='M13 5.5l7.5 7.5-7.5 7.5-7.5-7.5z'/%3E%3C/g%3E%3Cpath d='M13 10l3 3-3 3-3-3z' fill='%23a8322d'/%3E%3Cpath d='M39 9l4 4-4 4-4-4z' fill='%23888' fill-opacity='.8'/%3E%3Ccircle cx='31' cy='13' r='1.3' fill='%23888'/%3E%3Ccircle cx='47' cy='13' r='1.3' fill='%23888'/%3E%3C/svg%3E");
+}
+/* Зігзаг — «вада», з ромбікамі */
+.footer .ornament[data-pattern='2'] {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='52' height='26' viewBox='0 0 52 26'%3E%3Cpath d='M0 17l6.5-9 6.5 9 6.5-9 6.5 9 6.5-9 6.5 9 6.5-9 6.5 9' fill='none' stroke='%23a8322d' stroke-width='2' stroke-linejoin='round'/%3E%3Cg fill='%23888' fill-opacity='.85'%3E%3Cpath d='M6.5 18.5l2 2-2 2-2-2z'/%3E%3Cpath d='M19.5 18.5l2 2-2 2-2-2z'/%3E%3Cpath d='M32.5 18.5l2 2-2 2-2-2z'/%3E%3Cpath d='M45.5 18.5l2 2-2 2-2-2z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* ---------- Папараць-кветка в конце «Истории» ---------- */
+.fern {
+  position: relative;
+  display: block;
+  width: 36px;
+  height: 36px;
+  margin: 10px auto 0;
+  padding: 4px;
+  border: 0;
+  border-radius: 50%;
+  /* Фон страницы «обрывает» линию истории: папоротник растёт на её конце */
+  background: var(--bg);
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 0.3s, rotate 0.5s var(--spring, var(--ease));
+}
+.fern:hover,
+.fern:focus-visible {
+  opacity: 1;
+  rotate: -8deg;
+}
+.fern:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.fern svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.fern__leaf,
+.fern__flower {
+  position: absolute;
+  inset: 4px;
+}
+.fern__flower {
+  scale: 0;
+  opacity: 0;
+  transition: scale 0.8s var(--spring, var(--ease)), opacity 0.3s;
+}
+.fern.is-bloom {
+  opacity: 1;
+}
+.fern.is-bloom .fern__leaf {
+  opacity: 0.35;
+}
+.fern.is-bloom .fern__flower {
+  scale: 1;
+  opacity: 1;
+}
+/* Купальская ночь (6–7 июля): папоротник светится сам */
+.fern.is-kupalle {
+  opacity: 1;
+  filter: drop-shadow(0 0 6px #ffc34d);
+  animation: kupalle 2.4s ease-in-out infinite alternate;
+}
+@keyframes kupalle {
+  to {
+    filter: drop-shadow(0 0 14px #ff9f43);
+  }
+}
+@media (max-width: 720px) {
+  .fern {
+    margin-left: -10px;
+  }
+}
+
+/* ---------- Слои с полётами ---------- */
+.fun-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 170;
+  overflow: hidden;
+  pointer-events: none;
+  contain: strict;
+}
+.fun-flower {
+  position: absolute;
+  left: 0;
+  top: 0;
+  will-change: transform;
+}
+.fun-flower svg,
+.fun-busel svg,
+.fun-zubr svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+/* Бусел: машет крыльями и летит волной */
+.fun-busel {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 130px;
+  will-change: transform;
+  filter: drop-shadow(0 6px 8px rgba(16, 24, 40, 0.18));
+}
+.busel__wing {
+  transform-origin: 64px 35px;
+  animation: busel-flap 0.55s ease-in-out infinite alternate;
+}
+.busel__wing--far {
+  animation-delay: -0.08s;
+}
+@keyframes busel-flap {
+  from {
+    transform: scaleY(1);
+  }
+  to {
+    transform: scaleY(-0.75);
+  }
+}
+
+/* Зубр: неспешно идёт по низу экрана */
+.fun-zubr {
+  position: absolute;
+  left: 0;
+  bottom: max(6px, env(safe-area-inset-bottom));
+  width: 130px;
+  will-change: transform;
+}
+.fun-zubr svg {
+  animation: zubr-bob 0.5s ease-in-out infinite alternate;
+}
+.zubr__legs {
+  transform-box: fill-box;
+  transform-origin: 50% 0;
+}
+.zubr__legs--a rect,
+.zubr__legs--b rect {
+  transform-box: fill-box;
+  transform-origin: 50% 0;
+  animation: zubr-leg 0.5s ease-in-out infinite alternate;
+}
+.zubr__legs--b rect {
+  animation-direction: alternate-reverse;
+}
+@keyframes zubr-bob {
+  to {
+    transform: translateY(-2px);
+  }
+}
+@keyframes zubr-leg {
+  from {
+    transform: rotate(-12deg);
+  }
+  to {
+    transform: rotate(12deg);
+  }
+}
+
+/* Искры папараці-кветкі */
+.fun-spark {
+  position: absolute;
+  left: -3px;
+  top: -3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ffd65a;
+  box-shadow: 0 0 8px 2px rgba(255, 159, 67, 0.7);
+}
+
+/* Лён прорастает снизу экрана */
+.fun-field {
+  transition: opacity 0.8s var(--ease);
+}
+.fun-field.is-out {
+  opacity: 0;
+}
+.fun-flax {
+  position: absolute;
+  bottom: -2px;
+  width: 40px;
+  margin-left: -20px;
+  transform-origin: 50% 100%;
+  animation: flax-sway 2.6s ease-in-out infinite alternate;
+  animation-delay: var(--d, 0s);
+}
+.fun-flax svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.flax__stem {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: flax-grow 1s var(--ease) forwards;
+  animation-delay: var(--d, 0s);
+}
+.flax__leaf {
+  opacity: 0;
+  animation: flax-show 0.4s var(--ease) forwards;
+  animation-delay: calc(var(--d, 0s) + 0.5s);
+}
+.flax__flower {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  transform: scale(0);
+  animation: flax-pop 0.8s var(--spring, var(--ease)) forwards;
+  animation-delay: calc(var(--d, 0s) + 0.85s);
+}
+@keyframes flax-sway {
+  from {
+    rotate: -3deg;
+  }
+  to {
+    rotate: 3deg;
+  }
+}
+@keyframes flax-grow {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes flax-show {
+  to {
+    opacity: 1;
+  }
+}
+@keyframes flax-pop {
+  to {
+    transform: scale(1);
+  }
+}
+
+/* ---------- Тост о находке ---------- */
+.fun-toast {
+  position: fixed;
+  left: 50%;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 175;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: max-content;
+  max-width: min(440px, calc(100vw - 32px));
+  padding: 12px 16px 12px 12px;
+  border: 1px solid var(--stroke);
+  border-radius: var(--r-lg);
+  background: var(--surface-solid);
+  color: var(--text);
+  box-shadow: var(--shadow-lg);
+  pointer-events: none;
+  opacity: 0;
+  translate: -50% 24px;
+  transition: opacity 0.3s var(--ease), translate 0.6s var(--spring-soft, var(--ease));
+}
+.fun-toast.is-on {
+  opacity: 1;
+  translate: -50% 0;
+}
+.fun-toast__icon {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--surface-2);
+}
+.fun-toast__icon svg {
+  width: 34px;
+  height: 34px;
+}
+.fun-toast__body {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+  font-size: calc(13.5px * var(--fs));
+  line-height: 1.4;
+  color: var(--text-2);
+}
+.fun-toast__body small {
+  font-family: var(--mono);
+  font-size: calc(11.5px * var(--fs));
+  color: var(--text-3);
+}
+.fun-toast__body b {
+  font-size: calc(15px * var(--fs));
+  color: var(--text);
+}
+
+/* ---------- Коллекция секретов в настройках ---------- */
+.eggs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  gap: 8px;
+}
+.egg {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 6px 10px 6px 6px;
+  border: 1px dashed var(--stroke-2);
+  border-radius: var(--r-md);
+  font-size: calc(13.5px * var(--fs));
+  font-weight: 600;
+}
+.egg.is-found {
+  border-style: solid;
+  border-color: var(--stroke);
+  background: var(--surface-2);
+}
+.egg__icon {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--surface-3);
+  color: var(--text-3);
+  font-family: var(--mono);
+}
+.egg__icon svg {
+  width: 24px;
+  height: 24px;
 }

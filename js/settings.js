@@ -1,5 +1,5 @@
 /* ==========================================================================
-   BelPolitCompass · Alpha 0.4 — настройки
+   BelPolitCompass · Alpha 0.5 — настройки
    Три вкладки: «Основные» (упрощённый режим, тема, текст, анимации),
    «Спецвозможности» (профили, зрение, чтение, управление) и «Данные».
    Схема и проверка значений — в boot.js; всё хранится только в браузере.
@@ -18,6 +18,7 @@
   if (!sheet || !form) return;
 
   const mqReduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const mqDark = window.matchMedia('(prefers-color-scheme: dark)');
   const ttsSupported = 'speechSynthesis' in window && typeof window.SpeechSynthesisUtterance === 'function';
 
   /* ---------- Состояние ---------- */
@@ -72,6 +73,24 @@
   };
   if (mqReduce.addEventListener) mqReduce.addEventListener('change', onReduceChange);
 
+  // Тема «Как в системе» перекрашивается средствами CSS; здесь только подпись
+  // о том, что сейчас выбрано в системе, — она меняется на лету вместе с ОС
+  function paintThemeHint() {
+    const el = $('#themeSys');
+    if (!el) return;
+    const sys = mqDark.matches ? 'тёмная' : 'светлая';
+    el.textContent =
+      prefs.theme === 'system'
+        ? `Сейчас в системе ${sys} тема — сайт следует за ней и переключится сам`
+        : `В системе сейчас ${sys} тема, но выбрана ${prefs.theme === 'dark' ? 'тёмная' : 'светлая'} — она важнее`;
+  }
+  const onDarkChange = () => {
+    paintThemeHint();
+    syncThemeColor();
+  };
+  if (mqDark.addEventListener) mqDark.addEventListener('change', onDarkChange);
+  else if (mqDark.addListener) mqDark.addListener(onDarkChange);
+
   /* ---------- Упрощённый режим: кнопки на странице ---------- */
   function syncSimpleButtons() {
     $$('[data-simple-toggle]').forEach((b) => {
@@ -95,6 +114,7 @@
       else if (el.type === 'checkbox') el.checked = el.dataset.off ? v === el.value : !!v;
     });
     paintMotionHint();
+    paintThemeHint();
     paintPresets();
     const rateRow = $('#ttsRateRow');
     if (rateRow) rateRow.disabled = !prefs.tts;
@@ -197,6 +217,7 @@
     if (A.storage('bpc-ax') || A.storage('bpc-ay')) parts.push('выбранные оси компаса');
     if (A.storage(B.KEY) && A.storage(B.KEY) !== '{}') parts.push('настройки');
     if (A.storage('bpc-tour')) parts.push('отметка о туре');
+    if (window.BPCFun && window.BPCFun.found().length) parts.push('найденные секреты');
     $('#dataStatus').textContent = parts.length
       ? `В этом браузере сохранено: ${parts.join(', ')}.`
       : 'В этом браузере пока ничего не сохранено.';

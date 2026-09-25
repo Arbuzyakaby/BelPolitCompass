@@ -1,5 +1,5 @@
 /* ==========================================================================
-   BelPolitCompass · Alpha 0.4 — тест «Где я на компасе»
+   BelPolitCompass · Alpha 0.5 — тест «Где я на компасе»
    40 утверждений, по 10 на ось. Результат считается в той же шкале
    от −10 до +10, что и позиции партий. Ответы хранятся только в браузере.
    ========================================================================== */
@@ -257,6 +257,8 @@
     window.scrollTo({ top: window.scrollY + box.getBoundingClientRect().top - navH - 12, behavior: A.reduced ? 'auto' : 'smooth' });
     const h = $('.qz-result h3', box);
     if (h) h.focus({ preventScroll: true });
+    // Тест пройден до конца только что (а не открыт готовым после перезагрузки)
+    document.dispatchEvent(new CustomEvent('bpc:quiz-done'));
   }
 
   function restart() {

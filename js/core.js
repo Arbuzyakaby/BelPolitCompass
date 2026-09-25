@@ -1,5 +1,5 @@
 /* ==========================================================================
-   BelPolitCompass · Alpha 0.4 — чистая логика без DOM
+   BelPolitCompass · Alpha 0.5 — чистая логика без DOM
    Числа, склонения, сходство партий, подсчёт теста, раскладка точек,
    выпуклые оболочки. Работает и в браузере (window.BPCCore), и в Node
    (require) — поэтому всё здесь покрыто модульными тестами.
@@ -229,6 +229,70 @@
     return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
   }
 
+  /* ---------- Физика: пружины, резинка, частицы ----------
+     Всё «живое» на сайте (отскоки, стрелка в логотипе, резинка на мини-компасе,
+     падающие васильки) считается здесь, без DOM, и проверяется тестами. */
+  const SPRING_DT = 1 / 120;
+
+  // Шаг затухающей пружины: x — отклонение от цели, v — скорость, k — жёсткость,
+  // c — затухание. Полунеявный Эйлер устойчив только на мелком шаге, поэтому
+  // длинный кадр (вкладка была в фоне) дробим на шаги по 1/120 с.
+  function springStep(state, dt, k, c) {
+    const n = Math.min(240, Math.max(1, Math.ceil(dt / SPRING_DT)));
+    const h = Math.min(dt, 2) / n;
+    let x = state.x;
+    let v = state.v;
+    for (let i = 0; i < n; i++) {
+      v += (-k * x - c * v) * h;
+      x += v * h;
+    }
+    return { x, v };
+  }
+
+  const springAtRest = (s, eps = 1e-3) => Math.abs(s.x) < eps && Math.abs(s.v) < eps * 10;
+
+  // Путь пружины от 0 до 1 с кадрами по 1/60 с: для CSS linear() и WAAPI
+  function springCurve(k = 170, c = 16, maxT = 3) {
+    const dt = 1 / 60;
+    let s = { x: -1, v: 0 };
+    const points = [0];
+    for (let t = 0; t < maxT; t += dt) {
+      s = springStep(s, dt, k, c);
+      points.push(1 + s.x);
+      if (springAtRest(s, 2e-3)) break;
+    }
+    points[points.length - 1] = 1;
+    return { points, duration: Math.round((points.length - 1) * dt * 1000) };
+  }
+
+  // 'linear(0, 0.1, …, 1)' — пружина как функция плавности для CSS-переходов
+  const springEasing = (k, c) =>
+    'linear(' + springCurve(k, c).points.map((v) => +v.toFixed(3)).join(', ') + ')';
+
+  // Резинка: небольшое смещение проходит почти как есть, большое упирается в max
+  const rubber = (d, max) => (max > 0 ? max * Math.tanh(d / max) : 0);
+
+  // Шаг частицы: гравитация, сопротивление воздуха, отскок от пола с потерей
+  // энергии и трение о пол. Частица, которая почти не прыгает, ложится.
+  function particleStep(p, dt, o) {
+    const q = { ...p };
+    const drag = Math.exp(-(o.drag || 0) * dt);
+    q.vy += o.g * dt;
+    q.vx *= drag;
+    q.vy *= drag;
+    q.x += q.vx * dt;
+    q.y += q.vy * dt;
+    q.r = (q.r || 0) + (q.vr || 0) * dt;
+    if (q.y >= o.floor) {
+      q.y = o.floor;
+      q.vy = Math.abs(q.vy) * o.bounce < (o.rest || 40) ? 0 : -Math.abs(q.vy) * o.bounce;
+      q.vx *= o.friction;
+      q.vr = (q.vr || 0) * o.friction;
+      q.resting = q.vy === 0;
+    }
+    return q;
+  }
+
   return {
     MINUS,
     plural,
@@ -250,5 +314,11 @@
     hexToRgb,
     luminance,
     contrast,
+    springStep,
+    springAtRest,
+    springCurve,
+    springEasing,
+    rubber,
+    particleStep,
   };
 });
