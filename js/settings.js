@@ -1,5 +1,5 @@
 /* ==========================================================================
-   BelPolitCompass · Alpha 0.5 — настройки
+   BelPolitCompass · Alpha 0.5.1 — настройки
    Три вкладки: «Основные» (упрощённый режим, тема, текст, анимации),
    «Спецвозможности» (профили, зрение, чтение, управление) и «Данные».
    Схема и проверка значений — в boot.js; всё хранится только в браузере.
@@ -147,6 +147,9 @@
   }
 
   /* ---------- Профили специальных возможностей ---------- */
+  // Профиль — переключатель: повторное нажатие выключает его и возвращает
+  // значения, которые были до включения (снимок живёт до перезагрузки страницы)
+  const presetBefore = {};
   const presetsBox = $('#presets');
   if (presetsBox) {
     presetsBox.innerHTML = Object.entries(B.PRESETS)
@@ -158,16 +161,23 @@
     presetsBox.addEventListener('click', (e) => {
       const b = e.target.closest('[data-preset]');
       if (!b) return;
-      const preset = B.PRESETS[b.dataset.preset];
+      const id = b.dataset.preset;
+      const preset = B.PRESETS[id];
+      if (B.isPresetOn(prefs, id)) {
+        set(B.presetOff(prefs, id, presetBefore[id]), true);
+        delete presetBefore[id];
+        say(`Профиль «${preset.label}» выключен.`);
+        return;
+      }
+      presetBefore[id] = Object.fromEntries(Object.keys(preset.set).map((k) => [k, prefs[k]]));
       set(preset.set, true);
-      say(`Профиль «${preset.label}» включён. Любую настройку можно поменять ниже.`);
+      say(`Профиль «${preset.label}» включён. Нажмите ещё раз, чтобы выключить.`);
     });
   }
 
   function paintPresets() {
     $$('[data-preset]').forEach((b) => {
-      const s = B.PRESETS[b.dataset.preset].set;
-      const on = Object.keys(s).every((k) => prefs[k] === s[k]);
+      const on = B.isPresetOn(prefs, b.dataset.preset);
       b.setAttribute('aria-pressed', String(on));
       b.classList.toggle('is-on', on);
     });
@@ -266,9 +276,11 @@
       say('На компасе снова «Геополитический вектор» × «Модель власти».');
     } else if (act === 'a11y') {
       set(B.resetA11y(prefs), true);
-      say('Специальные возможности сброшены.');
+      Object.keys(presetBefore).forEach((k) => delete presetBefore[k]);
+      say('Специальные возможности и профили выключены.');
     } else if (act === 'prefs') {
       set({ ...B.DEFAULTS }, true);
+      Object.keys(presetBefore).forEach((k) => delete presetBefore[k]);
       A.storage(B.KEY, null);
       say('Все настройки сброшены.');
     } else if (act === 'all') {

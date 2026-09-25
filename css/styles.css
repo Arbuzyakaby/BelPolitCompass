@@ -1,6 +1,6 @@
 /* ==========================================================================
-   BelPolitCompass · Alpha 0.5
-   Аналитическая дизайн-система: графитовая шкала, один тёмно-синий акцент,
+   BelPolitCompass · Alpha 0.5.1
+   Аналитическая дизайн-система: тёплая бумажная шкала, один тёмно-синий акцент,
    тонкие линии вместо стекла и теней, строгая типографика IBM Plex.
    ========================================================================== */
 
@@ -29,21 +29,21 @@
   --gutter: clamp(16px, 4vw, 40px);
 
   /* Светлая тема */
-  --bg: #f4f5f7;
-  --bg-2: #eceef2;
+  --bg: #f5f5f2;
+  --bg-2: #ecece7;
   --surface: #ffffff;
   --surface-solid: #ffffff;
-  --surface-2: #f7f8fa;
-  --surface-3: #edeff3;
-  --stroke: #e0e3e9;
-  --stroke-2: #c9ced7;
-  --text: #151a22;
-  --text-2: #475061;
-  --text-3: #5b6374;
-  --accent: #1f4f8f;
-  --accent-strong: #1f4f8f;
-  --accent-hover: #183f73;
-  --accent-soft: #e7edf6;
+  --surface-2: #fafaf8;
+  --surface-3: #efefea;
+  --stroke: #e3e2dc;
+  --stroke-2: #cbcac2;
+  --text: #17191e;
+  --text-2: #454a54;
+  --text-3: #595e69;
+  --accent: #1d4f91;
+  --accent-strong: #1d4f91;
+  --accent-hover: #163d72;
+  --accent-soft: #e6edf7;
   --on-accent: #ffffff;
   --green: #2c6b38;
   --red: #a8322d;
@@ -53,29 +53,29 @@
   --shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
   --shadow-lg: 0 16px 40px -16px rgba(16, 24, 40, 0.28), 0 2px 6px rgba(16, 24, 40, 0.06);
   --dot-ring: #ffffff;
-  --grid-line: #eceef2;
-  --grid-axis: #aeb5c1;
+  --grid-line: #ecebe6;
+  --grid-axis: #adb0b8;
   --scrim: rgba(10, 14, 20, 0.55);
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --bg: #0e1116;
-    --bg-2: #0a0c10;
-    --surface: #151920;
-    --surface-solid: #151920;
-    --surface-2: #1a1f27;
-    --surface-3: #232935;
-    --stroke: #262d38;
-    --stroke-2: #353d4b;
-    --text: #e7eaef;
-    --text-2: #a9b1be;
-    --text-3: #949cab;
-    --accent: #86abe2;
+    --bg: #10141b;
+    --bg-2: #0b0e13;
+    --surface: #171c25;
+    --surface-solid: #171c25;
+    --surface-2: #1c222c;
+    --surface-3: #252c38;
+    --stroke: #28303c;
+    --stroke-2: #37404e;
+    --text: #e9ecf1;
+    --text-2: #adb4c1;
+    --text-3: #98a0ae;
+    --accent: #8db2ea;
     --accent-strong: #3566ad;
     --accent-hover: #3f72bc;
-    --accent-soft: #1b2638;
+    --accent-soft: #1b2739;
     --on-accent: #ffffff;
     --green: #5aa56a;
     --red: #e0736d;
@@ -84,30 +84,30 @@
     --np: #80889a;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
     --shadow-lg: 0 20px 48px -16px rgba(0, 0, 0, 0.8), 0 2px 6px rgba(0, 0, 0, 0.4);
-    --dot-ring: #151920;
-    --grid-line: #1e242d;
-    --grid-axis: #4a5363;
+    --dot-ring: #171c25;
+    --grid-line: #1f2630;
+    --grid-axis: #4b5566;
     --scrim: rgba(0, 0, 0, 0.66);
     color-scheme: dark;
   }
 }
 
 :root[data-theme='dark'] {
-  --bg: #0e1116;
-  --bg-2: #0a0c10;
-  --surface: #151920;
-  --surface-solid: #151920;
-  --surface-2: #1a1f27;
-  --surface-3: #232935;
-  --stroke: #262d38;
-  --stroke-2: #353d4b;
-  --text: #e7eaef;
-  --text-2: #a9b1be;
-  --text-3: #949cab;
-  --accent: #86abe2;
+  --bg: #10141b;
+  --bg-2: #0b0e13;
+  --surface: #171c25;
+  --surface-solid: #171c25;
+  --surface-2: #1c222c;
+  --surface-3: #252c38;
+  --stroke: #28303c;
+  --stroke-2: #37404e;
+  --text: #e9ecf1;
+  --text-2: #adb4c1;
+  --text-3: #98a0ae;
+  --accent: #8db2ea;
   --accent-strong: #3566ad;
   --accent-hover: #3f72bc;
-  --accent-soft: #1b2638;
+  --accent-soft: #1b2739;
   --on-accent: #ffffff;
   --green: #5aa56a;
   --red: #e0736d;
@@ -116,9 +116,9 @@
   --np: #80889a;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 20px 48px -16px rgba(0, 0, 0, 0.8), 0 2px 6px rgba(0, 0, 0, 0.4);
-  --dot-ring: #151920;
-  --grid-line: #1e242d;
-  --grid-axis: #4a5363;
+  --dot-ring: #171c25;
+  --grid-line: #1f2630;
+  --grid-axis: #4b5566;
   --scrim: rgba(0, 0, 0, 0.66);
   color-scheme: dark;
 }
@@ -421,7 +421,8 @@ svg {
 
 .btn__note {
   font-weight: 500;
-  opacity: 0.75;
+  /* Приглушённый, но не прозрачный: при opacity 0.75 в тёмной теме было 4.0:1 */
+  color: color-mix(in srgb, var(--on-accent) 90%, var(--accent-strong));
   font-size: calc(14px * var(--fs));
   padding-left: 10px;
   margin-left: 2px;
@@ -7184,4 +7185,91 @@ kbd {
 .egg__icon svg {
   width: 24px;
   height: 24px;
+}
+
+/* ==========================================================================
+   Alpha 0.5.1 — спокойнее: меньше рамок, плашек и иконок.
+   Смысл и порядок элементов прежние, убран только визуальный шум.
+   ========================================================================== */
+
+/* Вкладки в шапке — только подписи: семь иконок подряд спорили с текстом */
+.tab svg {
+  display: none;
+}
+
+.tab {
+  padding: 8px 12px;
+}
+
+/* Первый экран: без «миллиметровки» за текстом и без полужирной россыпи в абзаце */
+.hero::before {
+  content: none;
+}
+
+.hero__lead b {
+  font-weight: 500;
+}
+
+/* «Как пользоваться» — тихая текстовая кнопка рядом со ссылкой на компас */
+.text-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: calc(15px * var(--fs));
+  font-weight: 500;
+  color: var(--text-2);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--stroke-2);
+  text-underline-offset: 4px;
+  transition: color 0.2s, text-decoration-color 0.2s;
+}
+
+.text-btn:hover {
+  color: var(--text);
+  text-decoration-color: currentColor;
+}
+
+.text-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: var(--r-xs);
+}
+
+:root[data-targets='big'] .text-btn {
+  min-height: 44px;
+}
+
+/* Предложение упрощённого режима — строка, а не пунктирная рамка */
+.easy-offer {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.easy-offer.is-on {
+  padding: 10px 12px;
+}
+
+/* «Как читать» — спокойная сноска: тонкая линия слева вместо карточки с рамкой */
+.hint {
+  padding: 2px 0 2px 14px;
+  background: none;
+  border: 0;
+  border-left: 2px solid var(--stroke-2);
+  border-radius: 0;
+  color: var(--text-3);
+}
+
+.hint svg {
+  display: none;
+}
+
+/* Бейджи в подвале: осталась только версия */
+.footer__badges:empty {
+  display: none;
 }
