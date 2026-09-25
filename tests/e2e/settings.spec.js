@@ -40,7 +40,7 @@ test('тёмная тема применяется сразу и до отрис
   await page.locator('input[name="theme"][value="dark"] + span').click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
-  expect(bg).toBe('rgb(14, 17, 22)');
+  expect(bg).toBe('rgb(16, 20, 27)');
   await page.addInitScript(() => {
     document.addEventListener('readystatechange', () => {
       if (document.readyState === 'interactive' && !window.__themeAtParse) window.__themeAtParse = document.documentElement.dataset.theme;

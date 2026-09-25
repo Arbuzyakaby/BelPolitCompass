@@ -110,6 +110,60 @@ test('resetA11y: сбрасывает только специальные воз
   for (const k of B.A11Y_KEYS) assert.equal(r[k], B.DEFAULTS[k], k);
 });
 
+test('resetA11y: откатывает и то, что вне раздела поменяли включённые профили', () => {
+  const p = B.applyPreset(B.applyPreset(B.normalize({ theme: 'dark' }), 'vision'), 'simple');
+  const r = B.resetA11y(p);
+  assert.deepEqual(r, B.normalize({ theme: 'dark' }), 'размер текста, упрощённый режим и подсказки вернулись');
+  const motor = B.resetA11y(B.applyPreset(B.DEFAULTS, 'motor'));
+  assert.equal(motor.motion, B.DEFAULTS.motion, 'анимации вернулись');
+});
+
+test('isPresetOn и activePresets видят включённые профили', () => {
+  assert.deepEqual(B.activePresets(B.DEFAULTS), []);
+  const p = B.applyPreset(B.DEFAULTS, 'vision');
+  assert.ok(B.isPresetOn(p, 'vision'));
+  assert.ok(!B.isPresetOn(p, 'dyslexia'));
+  assert.ok(!B.isPresetOn(p, 'nope'));
+  assert.ok(B.activePresets(p).includes('vision'));
+});
+
+test('presetOff: каждый профиль выключается и возвращает значения по умолчанию', () => {
+  for (const id of Object.keys(B.PRESETS)) {
+    const off = B.presetOff(B.applyPreset(B.DEFAULTS, id), id);
+    assert.ok(!B.isPresetOn(off, id), `${id} выключен`);
+    assert.deepEqual(off, B.normalize(B.DEFAULTS), `${id}: всё как было`);
+  }
+});
+
+test('presetOff: возвращает значения, которые были до включения профиля', () => {
+  const start = B.normalize({ fs: 'xxl', contrast: 'high', theme: 'dark' });
+  const before = Object.fromEntries(Object.keys(B.PRESETS.vision.set).map((k) => [k, start[k]]));
+  const off = B.presetOff(B.applyPreset(start, 'vision'), 'vision', before);
+  assert.deepEqual(off, start);
+});
+
+test('presetOff: общие поля другого включённого профиля остаются', () => {
+  // «Моторика» и «Экранный диктор» оба выключают автопереход
+  const both = B.applyPreset(B.applyPreset(B.DEFAULTS, 'screenreader'), 'motor');
+  const off = B.presetOff(both, 'screenreader');
+  assert.equal(off.autoNext, false, 'автопереход нужен «Моторике»');
+  assert.equal(off.tables, false, 'таблицы выключены');
+  assert.ok(B.isPresetOn(off, 'motor'), '«Моторика» по-прежнему включена');
+});
+
+test('presetOff: вложенный профиль не удерживает поля, если его не включали отдельно', () => {
+  // «Без движения» (motion: off) целиком входит в «Экранный диктор»
+  const sr = B.applyPreset(B.DEFAULTS, 'screenreader');
+  assert.ok(B.isPresetOn(sr, 'calm'));
+  const before = Object.fromEntries(Object.keys(B.PRESETS.screenreader.set).map((k) => [k, B.DEFAULTS[k]]));
+  assert.equal(B.presetOff(sr, 'screenreader', before).motion, B.DEFAULTS.motion);
+  assert.equal(B.presetOff(sr, 'screenreader').motion, B.DEFAULTS.motion, 'и без снимка');
+  // А если «Без движения» был включён раньше — анимации остаются выключенными
+  const calmFirst = B.applyPreset(B.DEFAULTS, 'calm');
+  const before2 = Object.fromEntries(Object.keys(B.PRESETS.screenreader.set).map((k) => [k, calmFirst[k]]));
+  assert.equal(B.presetOff(B.applyPreset(calmFirst, 'screenreader'), 'screenreader', before2).motion, 'off');
+});
+
 test('tabFromHash: вкладки, якоря внутри вкладок и неизвестные адреса', () => {
   assert.equal(B.tabFromHash(''), 'home');
   assert.equal(B.tabFromHash('#'), 'home');

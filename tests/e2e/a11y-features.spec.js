@@ -208,6 +208,8 @@ test('профиль «Слабое зрение» включает набор �
 for (const id of ['dyslexia', 'motor', 'screenreader', 'calm', 'simple']) {
   test(`профиль «${id}» применяется без ошибок`, async ({ page }) => {
     await open(page);
+    // Тесты начинаются с motion: 'off' — это уже профиль «Без движения»
+    if (id === 'calm') await page.evaluate(() => window.BPCSettings.set({ motion: 'reduced' }));
     await openA11y(page);
     await page.locator(`[data-preset="${id}"]`).click();
     await expect(page.locator(`[data-preset="${id}"]`)).toHaveAttribute('aria-pressed', 'true');
@@ -216,6 +218,52 @@ for (const id of ['dyslexia', 'motor', 'screenreader', 'calm', 'simple']) {
     for (const [k, v] of Object.entries(expected)) expect(prefs[k]).toBe(v);
   });
 }
+
+// Alpha 0.5.1: раньше повторное нажатие оставляло профиль включённым
+for (const id of ['vision', 'dyslexia', 'motor', 'screenreader', 'calm', 'simple']) {
+  test(`профиль «${id}» выключается повторным нажатием и возвращает настройки`, async ({ page }) => {
+    await open(page);
+    if (id === 'calm') await page.evaluate(() => window.BPCSettings.set({ motion: 'reduced' }));
+    await openA11y(page);
+    const before = await page.evaluate(() => window.BPCSettings.prefs);
+    const preset = page.locator(`[data-preset="${id}"]`);
+    await preset.click();
+    await expect(preset).toHaveAttribute('aria-pressed', 'true');
+    await preset.click();
+    await expect(preset).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.locator('#setMsg')).toContainText('выключен');
+    expect(await page.evaluate(() => window.BPCSettings.prefs)).toEqual(before);
+  });
+}
+
+test('выключение профиля возвращает значения, выбранные до него', async ({ page }) => {
+  await open(page);
+  await page.evaluate(() => window.BPCSettings.set({ fs: 'xxl', contrast: 'high' }));
+  await openA11y(page);
+  const preset = page.locator('[data-preset="vision"]');
+  await preset.click();
+  await expect(page.locator('html')).toHaveAttribute('data-fs', 'xl');
+  await preset.click();
+  const html = page.locator('html');
+  await expect(html).toHaveAttribute('data-fs', 'xxl');
+  await expect(html).toHaveAttribute('data-contrast', 'high');
+  await expect(page.locator('input[name="contrast"][value="high"]')).toBeChecked();
+});
+
+test('сброс после профиля возвращает и размер текста, и анимации, и упрощённый режим', async ({ page }) => {
+  await open(page);
+  await openA11y(page);
+  await page.locator('[data-preset="simple"]').click();
+  await page.locator('[data-preset="motor"]').click();
+  await page.locator('[data-set="a11y"]').click();
+  const html = page.locator('html');
+  await expect(html).not.toHaveAttribute('data-fs', /./);
+  await expect(html).not.toHaveAttribute('data-simple', /./);
+  await expect(html).not.toHaveAttribute('data-autonext', /./);
+  await expect(page.locator('[data-preset][aria-pressed="true"]')).toHaveCount(0);
+  const prefs = await page.evaluate(() => window.BPCSettings.prefs);
+  expect(prefs.motion).toBe('system');
+});
 
 test('«Сбросить специальные возможности» не трогает тему и упрощённый режим', async ({ page }) => {
   await open(page);

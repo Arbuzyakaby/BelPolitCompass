@@ -5,7 +5,7 @@ test('страница загружается: заголовок, версия,
   await open(page);
   await expect(page).toHaveTitle(/BelPolitCompass/);
   await expect(page.locator('.hero__title')).toHaveText('Политический компас Беларуси');
-  await expect(page.locator('.hero__meta [data-version]')).toHaveText('Alpha 0.5');
+  await expect(page.locator('.hero__meta [data-version]')).toHaveText('Alpha 0.5.1');
   await expect(page.locator('.hero__meta [data-updated]')).not.toBeEmpty();
   const apis = await page.evaluate(() =>
     ['BPC', 'BPCBoot', 'BPCCore', 'BPCTabs', 'BPCApp', 'BPCQuiz', 'BPCSettings', 'BPCA11y', 'BPCTour', 'BPCFun'].filter((k) => !window[k])

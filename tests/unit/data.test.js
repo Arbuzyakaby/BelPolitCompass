@@ -8,8 +8,9 @@ const HEX = /^#[0-9A-Fa-f]{6}$/;
 
 test('версия в data.js совпадает с package.json', () => {
   const pkg = JSON.parse(read('package.json'));
-  const [maj, min] = pkg.version.split('.');
-  assert.equal(D.version, `Alpha ${maj}.${min}`);
+  // 0.5.0 ↔ Alpha 0.5, 0.5.1 ↔ Alpha 0.5.1
+  const [maj, min, patch] = pkg.version.split('.');
+  assert.equal(D.version, `Alpha ${maj}.${min}` + (+patch ? `.${patch}` : ''));
 });
 
 test('оси: четыре, с уникальными id и всеми подписями', () => {

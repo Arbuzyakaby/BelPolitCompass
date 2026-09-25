@@ -66,19 +66,21 @@ test('версия одинакова в разметке и data.js', () => {
 });
 
 test('список версий: без повторов, по убыванию, текущая совпадает с data.js, package.json и CHANGELOG', () => {
+  // Номера вида Alpha 0.5 и Alpha 0.5.1: недостающая часть считается нулём
   const list = html.match(/<ol class="versions">([\s\S]*?)<\/ol>/)[1];
-  const vs = [...list.matchAll(/<b>Alpha (\d+)\.(\d+)<\/b>/g)].map((m) => [+m[1], +m[2]]);
+  const vs = [...list.matchAll(/<b>Alpha (\d+(?:\.\d+){1,2})<\/b>/g)].map((m) => m[1].split('.').map(Number));
+  const cmp = (a, b) => (a[0] - b[0]) || (a[1] - b[1]) || ((a[2] || 0) - (b[2] || 0));
   assert.ok(vs.length >= 5);
-  for (let i = 1; i < vs.length; i++) {
-    const [a, b] = [vs[i - 1], vs[i]];
-    assert.ok(a[0] > b[0] || (a[0] === b[0] && a[1] > b[1]), `Alpha ${a.join('.')} → Alpha ${b.join('.')}`);
-  }
+  for (let i = 1; i < vs.length; i++) assert.ok(cmp(vs[i - 1], vs[i]) > 0, `Alpha ${vs[i - 1].join('.')} → Alpha ${vs[i].join('.')}`);
   const current = list.match(/<li class="is-current">\s*<b>([^<]+)<\/b>/)[1];
   assert.equal(current, D.version);
   assert.equal(current, 'Alpha ' + vs[0].join('.'), 'текущая версия — первая в списке');
-  const pkg = JSON.parse(read('package.json')).version;
-  assert.equal('Alpha ' + pkg.split('.').slice(0, 2).join('.'), D.version, 'package.json');
-  assert.match(read('CHANGELOG.md'), new RegExp(`^## ${D.version} — \\d{4}-\\d{2}-\\d{2}$`, 'm'), 'запись в CHANGELOG');
+  // package.json: 0.5.0 ↔ Alpha 0.5, 0.5.1 ↔ Alpha 0.5.1
+  const [maj, min, patch] = JSON.parse(read('package.json')).version.split('.');
+  assert.equal('Alpha ' + [maj, min].concat(+patch ? [patch] : []).join('.'), D.version, 'package.json');
+  assert.equal(JSON.parse(read('package-lock.json')).version, JSON.parse(read('package.json')).version, 'package-lock.json');
+  const escaped = D.version.replace(/\./g, '\\.');
+  assert.match(read('CHANGELOG.md'), new RegExp(`^## ${escaped} — \\d{4}-\\d{2}-\\d{2}$`, 'm'), 'запись в CHANGELOG');
 });
 
 test('внешние ссылки открываются безопасно (rel="noopener")', () => {

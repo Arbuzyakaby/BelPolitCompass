@@ -1,5 +1,5 @@
 /* ==========================================================================
-   BelPolitCompass · Alpha 0.5 — загрузка до отрисовки
+   BelPolitCompass · Alpha 0.5.1 — загрузка до отрисовки
    Подключается в <head> синхронно: читает сохранённые настройки и адрес
    страницы и сразу выставляет атрибуты на <html>, чтобы не было вспышки
    темы, «прыжка» текста и мелькания чужой вкладки.
@@ -153,8 +153,41 @@
     return normalize({ ...normalize(prefs), ...preset.set });
   }
 
+  // Профиль включён, если все его поля сейчас совпадают с его значениями
+  function isPresetOn(prefs, name) {
+    const preset = PRESETS[name];
+    if (!preset) return false;
+    const p = normalize(prefs);
+    return Object.keys(preset.set).every((k) => p[k] === preset.set[k]);
+  }
+
+  const activePresets = (prefs) => Object.keys(PRESETS).filter((id) => isPresetOn(prefs, id));
+
+  /* Выключение профиля: его поля возвращаются к значениям до включения
+     (before — снимок этих полей) или к значениям по умолчанию. Поле, которое
+     нужно другому включённому профилю, остаётся как есть. Профиль, целиком
+     входящий в выключаемый («Без движения» внутри «Экранного диктора»),
+     поля не удерживает, если сам не был включён до него. */
+  function presetOff(prefs, name, before) {
+    const preset = PRESETS[name];
+    const p = normalize(prefs);
+    if (!preset) return p;
+    const inside = (id) => Object.entries(PRESETS[id].set).every(([k, v]) => preset.set[k] === v);
+    const wasOn = (id) => !!before && isPresetOn({ ...p, ...before }, id);
+    const others = activePresets(p).filter((id) => id !== name && (!inside(id) || wasOn(id)));
+    Object.keys(preset.set).forEach((k) => {
+      if (others.some((id) => k in PRESETS[id].set)) return;
+      p[k] = before && k in before ? before[k] : DEFAULTS[k];
+    });
+    return normalize(p);
+  }
+
+  /* Сброс специальных возможностей: все поля раздела и заодно то, что вне
+     раздела (размер текста, анимации, упрощённый режим) поменяли включённые
+     сейчас профили. Выбранное вручную, без профиля, не трогаем. */
   function resetA11y(prefs) {
     const p = normalize(prefs);
+    activePresets(p).forEach((id) => Object.keys(PRESETS[id].set).forEach((k) => (p[k] = DEFAULTS[k])));
     A11Y_KEYS.forEach((k) => (p[k] = DEFAULTS[k]));
     return p;
   }
@@ -214,6 +247,9 @@
     toAttrs,
     effectiveMotion,
     applyPreset,
+    isPresetOn,
+    activePresets,
+    presetOff,
     resetA11y,
     tabFromHash,
     applyAttrs,
