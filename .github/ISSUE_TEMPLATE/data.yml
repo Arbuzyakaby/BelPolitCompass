@@ -1,0 +1,19 @@
+name: Ошибка в данных
+description: Неверный лидер, год, статус партии, число мандатов или событие в хронологии
+title: "Данные: "
+labels: ["данные", "бета"]
+body:
+  - type: input
+    id: where
+    attributes:
+      label: Где ошибка
+      placeholder: "Например: карточка РПТС, поле «лидер»"
+    validations:
+      required: true
+  - type: textarea
+    id: fix
+    attributes:
+      label: Как правильно и откуда это известно
+      description: Ссылка на источник очень поможет.
+    validations:
+      required: true

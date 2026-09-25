@@ -1,4 +1,4 @@
-// Alpha 0.5: пасхалки с народными символами, физика и подсказка о теме системы
+// Alpha 0.5–0.6: пасхалки с народными символами, физика и подсказка о теме системы
 const { test, expect, open } = require('./fixtures');
 
 const found = (page) => page.evaluate(() => window.BPCFun.found());
@@ -25,9 +25,9 @@ test('модуль загружен, коллекция секретов пус�
   await page.waitForFunction(() => window.BPCFun);
   expect(await found(page)).toEqual([]);
   await openSecrets(page);
-  await expect(page.locator('#eggList .egg')).toHaveCount(6);
+  await expect(page.locator('#eggList .egg')).toHaveCount(10);
   await expect(page.locator('#eggList .egg.is-found')).toHaveCount(0);
-  await expect(page.locator('#eggStatus')).toContainText('Найдено: 0 из 6');
+  await expect(page.locator('#eggStatus')).toContainText('Найдено: 0 из 10');
   await expect(page.locator('#eggStatus')).toContainText('Подсказка:');
 });
 
@@ -38,7 +38,7 @@ test('«бусел», набранный на клавиатуре, находи
   await expect.poll(() => found(page)).toEqual(['busel']);
   await expect(page.locator('.fun-toast')).toHaveClass(/is-on/);
   await expect(page.locator('.fun-toast')).toContainText('Бусел');
-  await expect(page.locator('.fun-toast')).toContainText('1 из 6');
+  await expect(page.locator('.fun-toast')).toContainText('1 из 10');
   await expect(page.locator('#announcer')).toContainText('Секрет найден: Бусел');
   // Сохраняется между визитами
   await page.reload();
@@ -124,13 +124,13 @@ test('коллекция в настройках: найденные симво�
   await openSecrets(page);
   await expect(page.locator('#eggList .egg.is-found')).toHaveCount(1);
   await expect(page.locator('#eggList .egg.is-found')).toContainText('Васількі');
-  await expect(page.locator('#eggStatus')).toContainText('Найдено: 1 из 6');
+  await expect(page.locator('#eggStatus')).toContainText('Найдено: 1 из 10');
   // Подсказка — к первому ещё не найденному символу (аист)
   await expect(page.locator('#eggStatus')).toContainText('аиста');
   await expect(page.locator('#dataStatus')).toContainText('найденные секреты');
   await page.evaluate(() => window.BPCFun.eggs.forEach((id) => window.BPCFun.discover(id)));
-  await expect(page.locator('#eggList .egg.is-found')).toHaveCount(6);
-  await expect(page.locator('#eggStatus')).toContainText('Найдены все 6 секретов');
+  await expect(page.locator('#eggList .egg.is-found')).toHaveCount(10);
+  await expect(page.locator('#eggStatus')).toContainText('Найдены все 10 секретов');
 });
 
 test('повторная находка не дублируется', async ({ page }) => {

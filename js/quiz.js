@@ -1,5 +1,5 @@
 /* ==========================================================================
-   BelPolitCompass · Alpha 0.5.1 — тест «Где я на компасе»
+   BelPolitCompass · Alpha 0.6 — тест «Где я на компасе»
    40 утверждений, по 10 на ось. Результат считается в той же шкале
    от −10 до +10, что и позиции партий. Ответы хранятся только в браузере.
    ========================================================================== */
@@ -32,7 +32,7 @@
   function load() {
     let raw = null;
     try {
-      raw = JSON.parse(A.storage(KEY) || 'null');
+      raw = A.allowed && !A.allowed('rememberQuiz') ? null : JSON.parse(A.storage(KEY) || 'null');
     } catch (e) {
       raw = null;
     }
@@ -44,6 +44,8 @@
   }
 
   function save() {
+    // В «Приватности» можно запретить запоминать ответы — тогда они живут до закрытия вкладки
+    if (A.allowed && !A.allowed('rememberQuiz')) return;
     A.storage(KEY, JSON.stringify(state));
   }
 
@@ -455,6 +457,8 @@
 
   /* API для настроек: что сохранено и как это удалить */
   window.BPCQuiz = {
+    key: KEY,
+    save,
     status() {
       return { answered: answeredCount(), total: N, done: !!state.done };
     },

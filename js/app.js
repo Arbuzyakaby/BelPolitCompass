@@ -1,5 +1,5 @@
 /* ==========================================================================
-   BelPolitCompass · Alpha 0.5.1 — компас, сайдбар-карта, общие утилиты
+   BelPolitCompass · Alpha 0.6 — компас, сайдбар-карта, общие утилиты
    ========================================================================== */
 (function () {
   'use strict';
@@ -82,6 +82,20 @@
     } catch (e) {
       return null;
     }
+  }
+
+  // Разрешено ли запоминать (раздел «Приватность»). Читаем при каждом вызове —
+  // настройка могла поменяться, а settings.js загружается позже app.js
+  function allowed(field) {
+    const B = window.BPCBoot;
+    return !B || B.parse(storage(B.KEY))[field] !== false;
+  }
+
+  // Бета: спор о позиции партии — готовая форма issue на GitHub с заполненной партией
+  const REPO = 'https://github.com/Arbuzyakaby/BelPolitCompass';
+  function disputeUrl(p) {
+    const q = new URLSearchParams({ template: 'position.yml', title: `Позиция: ${p.short}`, party: p.name });
+    return `${REPO}/issues/new?${q.toString()}`;
   }
 
   const smooth = () => (noMotion() ? 'auto' : 'smooth');
@@ -532,6 +546,7 @@
                 )
                 .join('')}
             </div>
+            <a class="pd__dispute" href="${disputeUrl(p)}" target="_blank" rel="noopener">Не согласны с оценкой? Напишите нам <span aria-hidden="true">↗</span><span class="sr-only"> (GitHub, новая вкладка)</span></a>
           </div>
         </div>
       </div>`;
@@ -718,8 +733,8 @@
 
   const selX = Dropdown($('#ddX'), (v, old) => onAxisChange(selX, old));
   const selY = Dropdown($('#ddY'), (v, old) => onAxisChange(selY, old));
-  let ax0 = storage('bpc-ax');
-  let ay0 = storage('bpc-ay');
+  let ax0 = allowed('rememberAxes') ? storage('bpc-ax') : null;
+  let ay0 = allowed('rememberAxes') ? storage('bpc-ay') : null;
   if (!axisById[ax0]) ax0 = 'vector';
   if (!axisById[ay0] || ay0 === ax0) ay0 = ax0 === 'power' ? 'vector' : 'power';
   selX.value = ax0;
@@ -899,6 +914,7 @@
   showInactive.addEventListener('change', () => renderCompass(false));
 
   function saveAxes() {
+    if (!allowed('rememberAxes')) return;
     storage('bpc-ax', selX.value);
     storage('bpc-ay', selY.value);
   }
@@ -1064,9 +1080,11 @@
 
   /* Публичный API для charts.js, quiz.js, settings.js, a11y.js и tour.js */
   window.BPCApp = {
+    allowed,
     setMe,
     showMeOnCompass,
     resetAxes,
+    saveAxes,
     closeDetail,
     storage,
     axisById,

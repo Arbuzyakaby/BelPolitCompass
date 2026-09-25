@@ -8,8 +8,9 @@ const { test: base, expect } = require('@playwright/test');
 const test = base.extend({
   prefs: [{ motion: 'off' }, { option: true }],
   tourDone: [true, { option: true }],
+  introDone: [true, { option: true }],
 
-  page: async ({ page, prefs, tourDone }, use) => {
+  page: async ({ page, prefs, tourDone, introDone }, use) => {
     const errors = [];
     await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
     page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
@@ -17,18 +18,19 @@ const test = base.extend({
       if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push('console: ' + m.text());
     });
     await page.addInitScript(
-      ({ prefs, tourDone }) => {
+      ({ prefs, tourDone, introDone }) => {
         try {
           if (sessionStorage.getItem('bpc-test-init')) return;
           sessionStorage.setItem('bpc-test-init', '1');
           localStorage.clear();
           if (tourDone) localStorage.setItem('bpc-tour', 'done');
+          if (introDone) localStorage.setItem('bpc-intro', 'done');
           if (prefs) localStorage.setItem('bpc-settings', JSON.stringify(prefs));
         } catch (e) {
           /* about:blank */
         }
       },
-      { prefs, tourDone }
+      { prefs, tourDone, introDone }
     );
     await use(page);
     expect(errors, 'ошибки JavaScript на странице').toEqual([]);

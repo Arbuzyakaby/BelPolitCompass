@@ -1,0 +1,23 @@
+name: Что-то не работает
+description: Ошибка на сайте, в тесте, в настройках или специальных возможностях
+title: "Ошибка: "
+labels: ["ошибка", "бета"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: Что произошло
+      description: Что вы делали, что ожидали увидеть и что увидели вместо этого.
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Устройство и браузер
+      placeholder: "Например: iPhone 13, Safari; Windows 11, Chrome"
+  - type: input
+    id: version
+    attributes:
+      label: Версия сайта
+      description: Видна на главной и в подвале.
+      placeholder: "Alpha 0.6"

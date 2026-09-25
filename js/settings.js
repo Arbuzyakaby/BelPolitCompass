@@ -1,7 +1,8 @@
 /* ==========================================================================
-   BelPolitCompass · Alpha 0.5.1 — настройки
-   Три вкладки: «Основные» (упрощённый режим, тема, текст, анимации),
-   «Спецвозможности» (профили, зрение, чтение, управление) и «Данные».
+   BelPolitCompass · Alpha 0.6 — настройки
+   Четыре вкладки: «Основные» (упрощённый режим, тема, текст, анимации),
+   «Спецвозможности» (профили, зрение, чтение, управление), «Приватность»
+   (что запоминать, внешние шрифты) и «Данные».
    Схема и проверка значений — в boot.js; всё хранится только в браузере.
    ========================================================================== */
 (function () {
@@ -54,6 +55,7 @@
     syncForm();
     updateStatus();
     if (!silentMsg && changed.includes('simple')) announce(prefs.simple ? 'Упрощённый режим включён' : 'Упрощённый режим выключен');
+    applyPrivacy(changed);
     return changed;
   }
 
@@ -209,6 +211,54 @@
     showPane(sTabs[n].id.replace('stab-', ''), true);
   });
 
+  /* ---------- Приватность ---------- */
+  function applyPrivacy(changed) {
+    const Q = window.BPCQuiz;
+    if (changed.includes('rememberQuiz') && Q) {
+      if (prefs.rememberQuiz) Q.save();
+      else A.storage(Q.key, null);
+      say(prefs.rememberQuiz ? 'Ответы теста снова запоминаются.' : 'Ответы теста удалены из браузера и больше не запоминаются.');
+    }
+    if (changed.includes('rememberAxes')) {
+      if (prefs.rememberAxes) A.saveAxes && A.saveAxes();
+      else {
+        A.storage('bpc-ax', null);
+        A.storage('bpc-ay', null);
+      }
+      say(prefs.rememberAxes ? 'Оси компаса снова запоминаются.' : 'Выбор осей больше не запоминается.');
+    }
+    if (changed.includes('webFonts')) {
+      if (prefs.webFonts) {
+        B.loadFonts(document);
+        say('Шрифты IBM Plex загружаются с Google Fonts.');
+      } else {
+        $$('link[href^="https://fonts.g"]').forEach((l) => l.remove());
+        say('Шрифты Google отключены: сайт использует шрифты системы.');
+      }
+      requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+    }
+    paintPrivacy();
+  }
+
+  // Человеческие названия того, что лежит в localStorage
+  function paintPrivacy() {
+    const list = $('#privacyList');
+    if (!list) return;
+    const Q = window.BPCQuiz;
+    const rows = [];
+    const has = (k) => A.storage(k) !== null && A.storage(k) !== undefined;
+    if (Q && has(Q.key)) {
+      const st = Q.status();
+      rows.push(st.done ? 'Результат теста' : `Ответы теста — ${st.answered} из ${st.total}`);
+    }
+    if (has('bpc-ax') || has('bpc-ay')) rows.push('Выбранные оси компаса');
+    if (has(B.KEY) && A.storage(B.KEY) !== '{}') rows.push('Настройки сайта');
+    if (has('bpc-tour')) rows.push('Отметка, что тур пройден или отклонён');
+    if (has('bpc-intro')) rows.push('Отметка, что 3D-пролёт уже показан');
+    if (has('bpc-eggs')) rows.push('Найденные секреты');
+    list.innerHTML = rows.length ? rows.map((r) => `<li>${r}</li>`).join('') : '<li>Ничего не сохранено.</li>';
+  }
+
   /* ---------- Данные ---------- */
   const msg = $('#setMsg');
   let msgTimer = null;
@@ -261,7 +311,10 @@
     const btn = e.target.closest('[data-set]');
     if (!btn) return;
     const act = btn.dataset.set;
-    if (act === 'tour') {
+    if (act === 'intro') {
+      close();
+      setTimeout(() => window.BPCIntro && window.BPCIntro.play(true), A.reduced ? 0 : 280);
+    } else if (act === 'tour') {
       close();
       A.storage('bpc-tour', null);
       setTimeout(() => window.BPCTour && window.BPCTour.start(), A.reduced ? 0 : 280);
@@ -296,6 +349,7 @@
       return;
     }
     updateStatus();
+    paintPrivacy();
   });
 
   /* ---------- Открытие и закрытие ---------- */
@@ -313,7 +367,8 @@
       sheet.classList.remove('is-closing');
       root.classList.add('has-sheet');
     }
-    showPane(pane === 'a11y' || pane === 'data' ? pane : 'main', true);
+    showPane(['a11y', 'privacy', 'data'].includes(pane) ? pane : 'main', true);
+    paintPrivacy();
   }
 
   function finishClose() {

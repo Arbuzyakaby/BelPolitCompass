@@ -210,3 +210,42 @@ test('run: недоступное хранилище (приватный реж�
   assert.doesNotThrow(() => B.run(win));
   assert.equal(attrs['data-tab'], 'home');
 });
+
+/* ---------- Alpha 0.6: приватность и 3D-пролёт ---------- */
+test('приватность: по умолчанию всё запоминается и шрифты грузятся, пролёт включён', () => {
+  for (const k of ['rememberQuiz', 'rememberAxes', 'webFonts', 'intro']) assert.equal(B.DEFAULTS[k], true, k);
+  assert.deepEqual(B.PRIVACY_KEYS, ['rememberQuiz', 'rememberAxes', 'webFonts']);
+  // Выключенное хранится, мусор отбрасывается
+  assert.equal(B.parse(JSON.stringify({ webFonts: false })).webFonts, false);
+  assert.equal(B.parse(JSON.stringify({ webFonts: 'no' })).webFonts, true);
+});
+
+test('loadFonts: добавляет preconnect и стиль один раз; run не грузит шрифты при запрете', () => {
+  const made = [];
+  const byId = {};
+  const doc = {
+    head: { appendChild: (l) => (made.push(l), l.attrs.id && (byId[l.attrs.id] = l)) },
+    createElement: () => ({ attrs: {}, setAttribute(k, v) { this.attrs[k] = v; } }),
+    getElementById: (id) => byId[id] || null,
+  };
+  B.loadFonts(doc);
+  B.loadFonts(doc);
+  assert.equal(made.length, 3);
+  assert.equal(made[2].attrs.href, B.FONTS_URL);
+  assert.match(B.FONTS_URL, /^https:\/\/fonts\.googleapis\.com\//);
+
+  const attrs = {};
+  let appended = 0;
+  const win = {
+    document: {
+      documentElement: { classList: { add() {} }, setAttribute: (k, v) => (attrs[k] = v), removeAttribute() {} },
+      head: { appendChild: () => appended++ },
+      createElement: () => ({ setAttribute() {} }),
+      getElementById: () => null,
+    },
+    localStorage: { getItem: (k) => (k === B.KEY ? JSON.stringify({ webFonts: false }) : null) },
+    location: { hash: '' },
+  };
+  B.run(win);
+  assert.equal(appended, 0);
+});
