@@ -6826,11 +6826,28 @@ kbd {
 
 /* ---------- Рушнік: орнамент в подвале разворачивается и меняет узор ---------- */
 .footer .ornament {
+  /* Это кнопка: снимаем оформление браузера, остаётся только узор */
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  font: inherit;
+  color: inherit;
   cursor: pointer;
   touch-action: manipulation;
   -webkit-user-select: none;
   user-select: none;
   transform-origin: left center;
+}
+/* Края узора растворяются маской — рамку фокуса рисуем внутри, она видна по центру */
+.footer .ornament:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -3px;
+  opacity: 1;
 }
 /* Васьміканцовая зорка */
 .footer .ornament[data-pattern='1'] {

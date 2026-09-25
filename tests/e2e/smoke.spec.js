@@ -8,7 +8,7 @@ test('страница загружается: заголовок, версия,
   await expect(page.locator('.hero__meta [data-version]')).toHaveText('Alpha 0.5');
   await expect(page.locator('.hero__meta [data-updated]')).not.toBeEmpty();
   const apis = await page.evaluate(() =>
-    ['BPC', 'BPCBoot', 'BPCCore', 'BPCTabs', 'BPCApp', 'BPCQuiz', 'BPCSettings', 'BPCA11y', 'BPCTour'].filter((k) => !window[k])
+    ['BPC', 'BPCBoot', 'BPCCore', 'BPCTabs', 'BPCApp', 'BPCQuiz', 'BPCSettings', 'BPCA11y', 'BPCTour', 'BPCFun'].filter((k) => !window[k])
   );
   expect(apis).toEqual([]);
 });

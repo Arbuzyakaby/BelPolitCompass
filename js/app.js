@@ -167,6 +167,36 @@
             aria-label="${p.name}: вектор ${fmt(p.pos.vector)}, власть ${fmt(p.pos.power)}"><i></i>${isActive(p) ? `<span aria-hidden="true">${p.abbr}</span>` : ''}<em aria-hidden="true">${p.short}</em></button>`;
         })
         .join('');
+
+    // Партии «вне системы» теснятся в одном углу: их области нажатия (24 × 24)
+    // не должны перекрываться (WCAG 2.5.8), поэтому точки слегка разводим —
+    // той же раскладкой, что и на большом компасе. Пересчёт — при смене ширины.
+    const dots = $$('.mdot', box);
+    const GAP = 2;
+    let placedW = 0;
+    function place() {
+      const W = box.clientWidth;
+      if (!W || W === placedW) return;
+      placedW = W;
+      const boxes = parties.map((p, i) => {
+        const hit = Math.max(isActive(p) ? 10 + Math.sqrt(p.seats) * 2.4 : 12, 24) + GAP;
+        return { p: { x: pct(p.pos.vector) + shift[i], y: 100 - pct(p.pos.power) }, w: hit, up: hit / 2, down: hit / 2 };
+      });
+      C.resolveOverlaps(boxes, 100 / W);
+      boxes.forEach((b, i) => {
+        dots[i].style.left = b.p.x.toFixed(2) + '%';
+        dots[i].style.top = b.p.y.toFixed(2) + '%';
+      });
+    }
+    place();
+    let placeRaf = 0;
+    window.addEventListener('resize', () => {
+      cancelAnimationFrame(placeRaf);
+      placeRaf = requestAnimationFrame(place);
+    });
+    // Главная могла быть скрыта при загрузке (ширина 0) — разложим при открытии
+    document.addEventListener('bpc:tab', () => requestAnimationFrame(place));
+
     box.addEventListener('click', (e) => {
       const b = e.target.closest('.mdot');
       if (b) openParty(b.dataset.id);

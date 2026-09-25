@@ -65,6 +65,22 @@ test('версия одинакова в разметке и data.js', () => {
   for (const v of versions) assert.equal(v, D.version);
 });
 
+test('список версий: без повторов, по убыванию, текущая совпадает с data.js, package.json и CHANGELOG', () => {
+  const list = html.match(/<ol class="versions">([\s\S]*?)<\/ol>/)[1];
+  const vs = [...list.matchAll(/<b>Alpha (\d+)\.(\d+)<\/b>/g)].map((m) => [+m[1], +m[2]]);
+  assert.ok(vs.length >= 5);
+  for (let i = 1; i < vs.length; i++) {
+    const [a, b] = [vs[i - 1], vs[i]];
+    assert.ok(a[0] > b[0] || (a[0] === b[0] && a[1] > b[1]), `Alpha ${a.join('.')} → Alpha ${b.join('.')}`);
+  }
+  const current = list.match(/<li class="is-current">\s*<b>([^<]+)<\/b>/)[1];
+  assert.equal(current, D.version);
+  assert.equal(current, 'Alpha ' + vs[0].join('.'), 'текущая версия — первая в списке');
+  const pkg = JSON.parse(read('package.json')).version;
+  assert.equal('Alpha ' + pkg.split('.').slice(0, 2).join('.'), D.version, 'package.json');
+  assert.match(read('CHANGELOG.md'), new RegExp(`^## ${D.version} — \\d{4}-\\d{2}-\\d{2}$`, 'm'), 'запись в CHANGELOG');
+});
+
 test('внешние ссылки открываются безопасно (rel="noopener")', () => {
   for (const m of html.matchAll(/<a [^>]*target="_blank"[^>]*>/g)) assert.match(m[0], /rel="noopener/, m[0]);
 });
