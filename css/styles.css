@@ -1,7 +1,8 @@
 /* ==========================================================================
-   BelPolitCompass · Alpha 0.5.1
-   Аналитическая дизайн-система: тёплая бумажная шкала, один тёмно-синий акцент,
-   тонкие линии вместо стекла и теней, строгая типографика IBM Plex.
+   BelPolitCompass · Alpha 0.6
+   Дизайн-язык «Sand-Blasted Glass»: тёплая бумажная шкала, один тёмно-синий
+   акцент, строгая типографика IBM Plex и матовое стекло с лёгкой песчаной
+   зернистостью. По сути это обычное стекло — просто с песком и громким именем.
    ========================================================================== */
 
 /* ---------- Токены ---------- */
@@ -182,7 +183,8 @@ body {
   line-height: 1.55;
   color: var(--text);
   font-feature-settings: 'tnum' 0, 'ss01' 1;
-  background: var(--bg);
+  background: var(--sb-field), var(--bg);
+  background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
@@ -215,12 +217,70 @@ svg {
   background: color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
-/* ---------- Стекло ---------- */
+/* ---------- Sand-Blasted Glass ----------
+   Карточка = полупрозрачная поверхность + размытие того, что под ней +
+   мелкий «песок» (SVG-шум). Цветовые токены остаются сплошными, поэтому
+   автотесты проверяют контраст по настоящим значениям; стекло лишь чуть
+   смешивает --surface с фоном, и текст остаётся между двумя проверенными
+   цветами. При повышенной контрастности и системной настройке «уменьшить
+   прозрачность» стекло становится сплошным. */
+:root {
+  --sb-tint: 78%;
+  --sb-blur: 18px;
+  --sb-edge: rgba(255, 255, 255, 0.65);
+  /* Зерно: fractal noise, окрашенный в цвет песка; прозрачность пикселя зависит от шума */
+  --sb-sand: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .55 0 0 0 0 .47 0 0 0 0 .34 .5 0 0 0 -.17'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23s)'/%3E%3C/svg%3E");
+  /* Тихое поле под стеклом: два размытых пятна — синее и песочное */
+  --sb-field: radial-gradient(60vmax 50vmax at 8% -10%, rgba(29, 79, 145, 0.07), transparent 70%),
+    radial-gradient(55vmax 45vmax at 105% 110%, rgba(190, 150, 90, 0.1), transparent 70%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --sb-tint: 74%;
+    --sb-edge: rgba(255, 255, 255, 0.06);
+    --sb-sand: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .92 0 0 0 0 .86 0 0 0 0 .74 .3 0 0 0 -.13'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23s)'/%3E%3C/svg%3E");
+    --sb-field: radial-gradient(60vmax 50vmax at 8% -10%, rgba(80, 130, 210, 0.12), transparent 70%),
+      radial-gradient(55vmax 45vmax at 105% 110%, rgba(200, 160, 100, 0.07), transparent 70%);
+  }
+}
+
+:root[data-theme='dark'] {
+  --sb-tint: 74%;
+  --sb-edge: rgba(255, 255, 255, 0.06);
+  --sb-sand: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .92 0 0 0 0 .86 0 0 0 0 .74 .3 0 0 0 -.13'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23s)'/%3E%3C/svg%3E");
+  --sb-field: radial-gradient(60vmax 50vmax at 8% -10%, rgba(80, 130, 210, 0.12), transparent 70%),
+    radial-gradient(55vmax 45vmax at 105% 110%, rgba(200, 160, 100, 0.07), transparent 70%);
+}
+
 .glass {
-  background: var(--surface);
+  background: var(--sb-sand), color-mix(in srgb, var(--surface) var(--sb-tint), transparent);
+  background-size: 180px 180px, auto;
   border: 1px solid var(--stroke);
   border-radius: var(--r-lg);
-  box-shadow: var(--shadow);
+  box-shadow: inset 0 1px 0 var(--sb-edge), var(--shadow);
+  -webkit-backdrop-filter: blur(var(--sb-blur)) saturate(140%);
+  backdrop-filter: blur(var(--sb-blur)) saturate(140%);
+}
+
+/* Где стекло мешает читать — оно становится сплошным */
+:root[data-contrast] .glass {
+  background: var(--surface);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+:root[data-contrast] body {
+  background: var(--bg);
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass {
+    background: var(--surface);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  body {
+    background: var(--bg);
+  }
 }
 
 /* ---------- Навигация ---------- */
@@ -233,7 +293,8 @@ svg {
 }
 
 .nav.is-scrolled {
-  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  background: var(--sb-sand), color-mix(in srgb, var(--bg) 72%, transparent);
+  background-size: 180px 180px, auto;
   border-bottom-color: var(--stroke);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   backdrop-filter: saturate(180%) blur(20px);
@@ -685,6 +746,75 @@ svg {
   font-size: calc(13px * var(--fs));
   color: var(--text-3);
   text-align: center;
+}
+
+/* Рекламный блок: другой проект автора */
+.promo {
+  grid-column: 1 / -1;
+  margin-top: 28px;
+  padding: 20px 22px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: 'tag tag tag' 'art body btn';
+  gap: 10px 18px;
+  align-items: center;
+}
+
+.promo__tag {
+  grid-area: tag;
+  font-family: var(--mono);
+  font-size: calc(11px * var(--fs));
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.promo__art {
+  grid-area: art;
+  width: 56px;
+  height: 56px;
+  color: var(--text-2);
+}
+
+.promo__art svg {
+  width: 100%;
+  height: 100%;
+}
+
+.promo__body {
+  grid-area: body;
+}
+
+.promo__title {
+  margin: 0 0 2px;
+  font-size: calc(18px * var(--fs));
+  letter-spacing: -0.01em;
+}
+
+.promo__body p {
+  margin: 0;
+  color: var(--text-2);
+  max-width: 52em;
+}
+
+.promo__btn {
+  grid-area: btn;
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .promo {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas: 'tag tag' 'art body' 'btn btn';
+  }
+  .promo__art {
+    width: 44px;
+    height: 44px;
+  }
+  .promo__btn {
+    justify-self: start;
+    white-space: normal;
+  }
 }
 
 /* Полоска парламента */
@@ -7272,4 +7402,318 @@ kbd {
 /* Бейджи в подвале: осталась только версия */
 .footer__badges:empty {
   display: none;
+}
+
+/* ---------- Alpha 0.6: «Приватность» в настройках ---------- */
+.privacy-facts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.privacy-facts li {
+  position: relative;
+  padding-left: 22px;
+  color: var(--text-2);
+  font-size: calc(14px * var(--fs));
+}
+
+.privacy-facts li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 0.45em;
+  width: 10px;
+  height: 6px;
+  border-left: 2px solid var(--green);
+  border-bottom: 2px solid var(--green);
+  transform: rotate(-45deg);
+}
+
+.privacy-facts b {
+  color: var(--text);
+}
+
+.privacy-list {
+  margin: 0 0 10px;
+  padding-left: 18px;
+  color: var(--text-2);
+  font-size: calc(14px * var(--fs));
+  display: grid;
+  gap: 4px;
+}
+
+/* ---------- Alpha 0.6: 3D-пролёт над компасом ---------- */
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--sb-field), var(--bg);
+  cursor: pointer;
+  animation: intro-in 0.4s var(--ease) both;
+}
+
+@keyframes intro-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.intro.is-out {
+  opacity: 0;
+  transition: opacity 0.45s var(--ease);
+  pointer-events: none;
+}
+
+.intro__stage {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  perspective: 1100px;
+  perspective-origin: 50% 35%;
+}
+
+.intro.is-3d .intro__world {
+  transform-style: preserve-3d;
+  /* Никакой opacity/filter на 3D-цепочке: они «сплющивают» сцену в плоскость */
+  will-change: transform;
+}
+
+.intro__plane {
+  position: relative;
+  width: min(78vmin, 640px);
+  aspect-ratio: 1;
+  border-radius: 14px;
+  border: 1px solid var(--stroke-2);
+  background-color: var(--surface);
+  background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 5% 5%;
+  box-shadow: 0 40px 90px -30px rgba(10, 20, 40, 0.45);
+}
+
+.intro.is-3d .intro__plane,
+.intro.is-3d .intro__pin,
+.intro.is-3d .intro__stem {
+  transform-style: preserve-3d;
+}
+
+.intro__q {
+  position: absolute;
+  width: 50%;
+  height: 50%;
+  opacity: 0.55;
+}
+.intro__q--tl { left: 0; top: 0; background: color-mix(in srgb, var(--gov) 10%, transparent); border-top-left-radius: 14px; }
+.intro__q--tr { right: 0; top: 0; background: color-mix(in srgb, var(--accent) 6%, transparent); border-top-right-radius: 14px; }
+.intro__q--bl { left: 0; bottom: 0; background: color-mix(in srgb, var(--text-3) 5%, transparent); border-bottom-left-radius: 14px; }
+.intro__q--br { right: 0; bottom: 0; background: color-mix(in srgb, var(--opp) 10%, transparent); border-bottom-right-radius: 14px; }
+
+.intro__axis {
+  position: absolute;
+  background: var(--grid-axis);
+}
+.intro__axis--h { left: 0; right: 0; top: 50%; height: 2px; margin-top: -1px; }
+.intro__axis--v { top: 0; bottom: 0; left: 50%; width: 2px; margin-left: -1px; }
+
+.intro__word {
+  position: absolute;
+  font-family: var(--mono);
+  font-size: clamp(10px, 1.6vmin, 13px);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.intro__word--t { top: 10px; left: 50%; translate: -50% 0; }
+.intro__word--b { bottom: 10px; left: 50%; translate: -50% 0; }
+.intro__word--l { left: 10px; top: 50%; translate: 0 -50%; }
+.intro__word--r { right: 10px; top: 50%; translate: 0 -50%; }
+
+.intro__pin {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.intro__base {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--c) 30%, transparent);
+  box-shadow: inset 0 0 0 2px var(--c);
+}
+
+.intro__pin.is-active .intro__base {
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  background: var(--c);
+  box-shadow: 0 0 0 2px var(--dot-ring);
+}
+
+/* Столбик стоит перпендикулярно плоскости и вырастает из неё */
+.intro__stem {
+  position: absolute;
+  left: -4px;
+  bottom: 0;
+  width: 8px;
+  height: var(--h);
+  border-radius: 4px 4px 0 0;
+  background: linear-gradient(to top, color-mix(in srgb, var(--c) 55%, transparent), var(--c));
+  transform-origin: 50% 100%;
+  transform: rotateX(-90deg) scaleY(0);
+  animation: intro-rise 1.2s var(--ease) forwards;
+  animation-delay: calc(1.1s + var(--i) * 70ms);
+}
+
+@keyframes intro-rise {
+  to {
+    transform: rotateX(-90deg) scaleY(1);
+  }
+}
+
+.intro__stem b {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  translate: -50% 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--surface);
+  border: 1px solid var(--stroke);
+}
+
+.intro__title {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: clamp(28px, 8vh, 88px);
+  text-align: center;
+  pointer-events: none;
+  padding: 0 var(--gutter);
+  opacity: 0;
+}
+
+.intro__kicker {
+  font-family: var(--mono);
+  font-size: calc(12px * var(--fs));
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.intro__name {
+  margin: 6px 0 4px;
+  font-size: clamp(26px, 4.6vw, 48px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: var(--text);
+}
+
+.intro__sub {
+  color: var(--text-2);
+  font-size: calc(15px * var(--fs));
+}
+
+.intro__skip {
+  position: absolute;
+  right: max(var(--gutter), env(safe-area-inset-right, 0px));
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+}
+
+:root[data-motion='off'] .intro,
+:root[data-motion='reduced'] .intro {
+  display: none;
+}
+
+@media print {
+  .intro {
+    display: none !important;
+  }
+}
+
+/* ---------- Alpha 0.6: новые пасхалки ---------- */
+.fun-dranik,
+.fun-bulba {
+  filter: drop-shadow(0 4px 5px rgba(16, 24, 40, 0.18));
+}
+
+.fun-pavuk {
+  position: absolute;
+  top: 0;
+  width: 70px;
+  transform-origin: 50% 0;
+  will-change: transform;
+}
+
+.fun-pavuk__thread {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  width: 1px;
+  height: 100vh;
+  background: #c49a42;
+  opacity: 0.8;
+}
+
+.fun-pavuk__body svg,
+.fun-vyanok svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.fun-pavuk__body {
+  display: block;
+  filter: drop-shadow(0 6px 8px rgba(16, 24, 40, 0.2));
+}
+
+.fun-vyanok {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 84px;
+  will-change: transform;
+  filter: drop-shadow(0 6px 10px rgba(16, 24, 40, 0.22));
+}
+
+/* ---------- Alpha 0.6: «Не согласны с оценкой?» в карточке партии ---------- */
+.pd__dispute {
+  display: inline-flex;
+  gap: 4px;
+  margin-top: 18px;
+  font-size: calc(13px * var(--fs));
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  text-underline-offset: 3px;
+}
+
+.pd__dispute:hover {
+  text-decoration-color: currentColor;
+}
+
+
+/* Alpha 0.6: четыре вкладки настроек на узком экране — сеткой 2 × 2, без обрезанных подписей */
+@media (max-width: 560px) {
+  .sheet__tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .sheet__tab {
+    white-space: nowrap;
+  }
 }

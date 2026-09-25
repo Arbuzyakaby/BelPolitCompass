@@ -1,8 +1,9 @@
 /* ==========================================================================
-   BelPolitCompass · Alpha 0.5.1 — «душа»: физика и пасхалки
+   BelPolitCompass · Alpha 0.6 — «душа»: физика и пасхалки
    • Пружины: отскок кнопок, стрелка-маятник в логотипе, резинка на мини-компасе,
      пружинная плавность (--spring) для точек компаса, глайдеров и полосок.
-   • Шесть пасхалок с народными символами Беларуси — без флагов и гербов.
+   • Десять пасхалок с народными символами Беларуси — без флагов и гербов.
+     Alpha 0.6 добавила дранікі, бульбу, саламянага павука и купальскі вянок.
    Всё движение — только в режиме «Полные анимации». В остальных режимах
    пасхалка всё равно находится и засчитывается, но показывается без полёта.
    Физика считается в core.js (springStep, rubber, particleStep) и покрыта тестами.
@@ -295,6 +296,29 @@
     rushnik:
       '<svg viewBox="0 0 32 32"><rect x="3" y="3" width="26" height="26" rx="3" fill="#faf7f0" stroke="#d9d2c3"/>' +
       '<path d="M16 6l6 6-6 6-6-6z M16 14l6 6-6 6-6-6z" fill="none" stroke="#a8322d" stroke-width="1.6"/><path d="M16 9.5l2.5 2.5-2.5 2.5-2.5-2.5z" fill="#a8322d"/><path d="M16 17.5l2.5 2.5-2.5 2.5-2.5-2.5z" fill="#a8322d"/></svg>',
+    draniki:
+      '<svg viewBox="0 0 32 32"><ellipse cx="16" cy="17.5" rx="13.5" ry="11" fill="#c98d2e"/><ellipse cx="16" cy="16.6" rx="12" ry="9.6" fill="#e3b04f"/>' +
+      [[9, 15], [13, 20], [20, 19], [23, 14], [17, 12], [11, 19.5], [21, 22]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1" fill="#b77a24"/>`).join('') +
+      '<path d="M11 13.2c1.4-3.2 8.6-3.2 10 0 .8 2-2 3.4-5 3.4s-5.8-1.4-5-3.4z" fill="#fbf7ee"/><circle cx="14" cy="12.6" r=".8" fill="#fff"/></svg>',
+    bulba:
+      '<svg viewBox="0 0 32 32"><path d="M5.5 17.5C5 11 10 7 16.5 7S27 10.5 27 16s-4 10-11 10S6 23 5.5 17.5z" fill="#b48650"/>' +
+      '<path d="M8.5 16.5c.4-4.5 4-7 8.5-7" stroke="#d6ae78" stroke-width="1.6" fill="none" stroke-linecap="round"/>' +
+      [[12, 19], [19, 13], [21, 20], [15, 23]].map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx="1.1" ry=".7" fill="#7b5628"/>`).join('') +
+      '</svg>',
+    pavuk:
+      '<svg viewBox="0 0 32 32"><g stroke="#c49a42" stroke-width="1.1" fill="none" stroke-linejoin="round"><path d="M16 2.5L27 16 16 29.5 5 16z"/><path d="M16 2.5v27M5 16h22"/><path d="M16 9l5.6 7-5.6 7-5.6-7z"/></g>' +
+      [[16, 2.5], [27, 16], [16, 29.5], [5, 16], [16, 16]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.5" fill="#e2b95e"/>`).join('') +
+      '</svg>',
+    vyanok:
+      '<svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="10.5" fill="none" stroke="#4f8f3f" stroke-width="3"/>' +
+      Array.from({ length: 8 }, (_, i) => {
+        const a = (i / 8) * Math.PI * 2;
+        const x = (16 + Math.cos(a) * 10.5).toFixed(1);
+        const y = (16 + Math.sin(a) * 10.5).toFixed(1);
+        const c = ['#3565cf', '#f2d16b', '#e0574f', '#f5f1e6'][i % 4];
+        return `<circle cx="${x}" cy="${y}" r="2.6" fill="${c}"/><circle cx="${x}" cy="${y}" r=".9" fill="#f7d774"/>`;
+      }).join('') +
+      '</svg>',
   };
   // Значок находки: у папараці — сам расцветший цветок
   const ICON = { ...ART, paparac: ART.kvetka };
@@ -342,6 +366,30 @@
       name: 'Лён',
       text: 'Голубое поле льна — один из самых узнаваемых образов Беларуси.',
       hint: 'Ответьте на все вопросы теста.',
+    },
+    {
+      id: 'draniki',
+      name: 'Дранікі',
+      text: 'Дранікі — картофельные оладьи со сметаной, самое известное блюдо белорусской кухни.',
+      hint: 'Проголодались? Напечатайте название главного белорусского блюда.',
+    },
+    {
+      id: 'bulba',
+      name: 'Бульба',
+      text: 'Бульба — так по-белорусски называют картофель. О ней поют песни и шутят сами белорусы.',
+      hint: 'Напечатайте, как по-белорусски называется картошка.',
+    },
+    {
+      id: 'pavuk',
+      name: 'Саламяны павук',
+      text: 'Саламяны павук — подвесное украшение из соломы. Его вешали в хате как оберег и знак гармонии мира.',
+      hint: 'Трижды нажмите в самый центр большого компаса — туда, где сходятся оси.',
+    },
+    {
+      id: 'vyanok',
+      name: 'Купальскі вянок',
+      text: 'На Купалле плетут венки из полевых цветов и трав и пускают их по воде.',
+      hint: 'Досмотрите 3D-пролёт над компасом до конца. Или напечатайте название летнего праздника.',
     },
   ];
   const eggById = Object.fromEntries(EGGS.map((e) => [e.id, e]));
@@ -493,7 +541,20 @@
     beast.animate([{ transform: 'translateX(-150px)' }, { transform: `translateX(${W + 20}px)` }], { duration: Math.max(7000, W * 7), easing: 'linear' }).onfinish = () => box.remove();
   }
 
-  const WORDS = { бусел: busel, busel: busel, зубр: zubr, zubr: zubr };
+  const WORDS = {
+    бусел: busel,
+    busel: busel,
+    зубр: zubr,
+    zubr: zubr,
+    дранікі: draniki,
+    драники: draniki,
+    draniki: draniki,
+    бульба: bulba,
+    bulba: bulba,
+    купалле: vyanok,
+    купалье: vyanok,
+    kupalle: vyanok,
+  };
   const typed = { s: '', t: 0 };
   document.addEventListener('keydown', (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey || e.repeat || !e.key || e.key.length !== 1) return;
@@ -622,6 +683,128 @@
   document.addEventListener('bpc:quiz-done', lyon);
 
   /* ==========================================================================
+     7. Дранікі и 8. Бульба — слова на клавиатуре; падают с «физикой»
+     ========================================================================== */
+  function fall(art, cls, n, sizeMin, sizeMax, opts) {
+    const box = layer('fun-rain');
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+    const ps = Array.from({ length: n }, () => {
+      const size = sizeMin + Math.random() * (sizeMax - sizeMin);
+      const el = document.createElement('span');
+      el.className = 'fun-flower ' + cls;
+      el.style.width = el.style.height = size + 'px';
+      el.innerHTML = art;
+      box.appendChild(el);
+      return {
+        el,
+        p: { x: Math.random() * (W - size), y: -size - Math.random() * H * 0.5, vx: (Math.random() - 0.5) * 220, vy: Math.random() * 100, vr: (Math.random() - 0.5) * 360, r: Math.random() * 360 },
+        floor: H - size * 0.8,
+      };
+    });
+    let t0 = performance.now();
+    const start = t0;
+    const frame = (t) => {
+      const dt = Math.min(0.04, (t - t0) / 1000);
+      t0 = t;
+      const age = (t - start) / 1000;
+      ps.forEach((o) => {
+        o.p = C.particleStep(o.p, dt, { g: 1700, drag: 0.35, floor: o.floor, bounce: opts.bounce, friction: opts.friction, rest: 60 });
+        o.el.style.transform = `translate(${o.p.x.toFixed(1)}px, ${o.p.y.toFixed(1)}px) rotate(${o.p.r.toFixed(1)}deg)`;
+      });
+      box.style.opacity = age > 3.8 ? Math.max(0, 1 - (age - 3.8) / 0.8) : 1;
+      if (age < 4.6 && full()) requestAnimationFrame(frame);
+      else box.remove();
+    };
+    requestAnimationFrame(frame);
+  }
+
+  function draniki() {
+    discover('draniki');
+    // Дранікі мягкие: почти не подпрыгивают и ложатся стопкой
+    if (full()) fall(ART.draniki, 'fun-dranik', window.innerWidth < 600 ? 10 : 18, 34, 52, { bounce: 0.2, friction: 0.6 });
+  }
+
+  function bulba() {
+    discover('bulba');
+    // Бульба твёрдая: отскакивает и катится
+    if (full()) fall(ART.bulba, 'fun-bulba', window.innerWidth < 600 ? 14 : 24, 26, 40, { bounce: 0.5, friction: 0.93 });
+  }
+
+  /* ==========================================================================
+     9. Саламяны павук — три нажатия в центр большого компаса
+     ========================================================================== */
+  function pavuk() {
+    discover('pavuk');
+    if (!full()) return;
+    const box = layer('fun-sky');
+    const el = document.createElement('div');
+    el.className = 'fun-pavuk';
+    el.innerHTML = `<span class="fun-pavuk__thread"></span><span class="fun-pavuk__body">${ART.pavuk}</span>`;
+    el.style.left = Math.round(window.innerWidth * (0.3 + Math.random() * 0.4)) + 'px';
+    box.appendChild(el);
+    const drop = Math.round(window.innerHeight * 0.38);
+    // Спускается на нитке с пружинным перелётом, покачивается и поднимается обратно
+    const s = springFrames('y', -drop - 80, 0, 120, 7, (v) => v);
+    const frames = s.frames.map((f, i) => ({
+      transform: `translateY(${(drop + Number(f.y)).toFixed(1)}px) rotate(${(Math.sin(i / 3) * 6 * Math.exp(-i / 40)).toFixed(2)}deg)`,
+    }));
+    const down = el.animate(frames, { duration: s.duration, fill: 'forwards' });
+    down.onfinish = () => {
+      setTimeout(() => {
+        el.animate([{ transform: `translateY(${drop}px)` }, { transform: 'translateY(-120px)' }], { duration: 1100, easing: 'cubic-bezier(0.5, 0, 0.75, 0)', fill: 'forwards' }).onfinish = () =>
+          box.remove();
+      }, 1800);
+    };
+  }
+
+  (function pavukTrigger() {
+    const plane = $('#plane');
+    if (!plane) return;
+    const taps = [];
+    plane.addEventListener('click', (e) => {
+      if (e.target.closest('.pdot, button, a')) return;
+      const r = plane.getBoundingClientRect();
+      const dx = (e.clientX - (r.left + r.width / 2)) / r.width;
+      const dy = (e.clientY - (r.top + r.height / 2)) / r.height;
+      if (Math.hypot(dx, dy) > 0.06) return;
+      const now = performance.now();
+      taps.push(now);
+      while (taps.length && now - taps[0] > 2500) taps.shift();
+      if (taps.length >= 3) {
+        taps.length = 0;
+        pavuk();
+      }
+    });
+  })();
+
+  /* ==========================================================================
+     10. Купальскі вянок — досмотреть 3D-пролёт или напечатать «купалле»
+     ========================================================================== */
+  function vyanok() {
+    discover('vyanok');
+    if (!full()) return;
+    const box = layer('fun-sky');
+    const el = document.createElement('div');
+    el.className = 'fun-vyanok';
+    el.innerHTML = ART.vyanok;
+    box.appendChild(el);
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+    // Венок плывёт по «воде» внизу экрана и покачивается на волнах
+    const frames = Array.from({ length: 25 }, (_, i) => {
+      const k = i / 24;
+      return {
+        transform: `translate(${(-90 + (W + 180) * k).toFixed(0)}px, ${(H - 110 + Math.sin(k * Math.PI * 6) * 8).toFixed(0)}px) rotate(${(Math.sin(k * Math.PI * 6) * 8).toFixed(1)}deg)`,
+      };
+    });
+    el.animate(frames, { duration: Math.max(6000, W * 6), easing: 'linear' }).onfinish = () => box.remove();
+  }
+  document.addEventListener('bpc:intro-end', (e) => {
+    if (e.detail && e.detail.completed) vyanok();
+  });
+
+  /* ==========================================================================
      Коллекция в настройках («Данные» → «Секреты»)
      ========================================================================== */
   function renderCollection() {
@@ -648,7 +831,7 @@
   /* ---------- Привет из консоли ---------- */
   try {
     console.info(
-      '%cПрывітанне! %cНа сайце схавана шэсць народных сімвалаў Беларусі — паспрабуйце знайсці ўсе.',
+      '%cПрывітанне! %cНа сайце схавана дзесяць народных сімвалаў Беларусі — паспрабуйце знайсці ўсе.',
       'font:600 14px sans-serif;color:#3565cf',
       'font:13px sans-serif'
     );
@@ -656,5 +839,5 @@
     /* консоли нет */
   }
 
-  window.BPCFun = { discover, found, eggs: EGGS.map((e) => e.id), nod, kickNeedles, vasilki, busel, zubr, lyon };
+  window.BPCFun = { discover, found, eggs: EGGS.map((e) => e.id), nod, kickNeedles, vasilki, busel, zubr, lyon, draniki, bulba, pavuk, vyanok };
 })();

@@ -122,7 +122,7 @@ test('скрипты подключены в правильном порядке
   const head = html.slice(0, html.indexOf('</head>'));
   assert.match(head, /<script src="js\/boot.js"><\/script>/);
   const order = [...html.slice(html.indexOf('</footer>')).matchAll(/<script src="js\/([a-z0-9]+)\.js"/g)].map((m) => m[1]);
-  assert.deepEqual(order, ['data', 'core', 'tabs', 'app', 'charts', 'quiz', 'settings', 'a11y', 'toc', 'tour', 'fun']);
+  assert.deepEqual(order, ['data', 'core', 'tabs', 'app', 'charts', 'quiz', 'settings', 'a11y', 'toc', 'intro', 'tour', 'fun']);
 });
 
 test('упрощённый режим: пояснения есть в каждой вкладке', () => {

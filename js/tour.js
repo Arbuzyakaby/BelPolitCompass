@@ -1,5 +1,5 @@
 /* ==========================================================================
-   BelPolitCompass · Alpha 0.5.1 — тур для новичков
+   BelPolitCompass · Alpha 0.6 — тур для новичков
    При первом визите внизу появляется приглашение. Тур подсвечивает элементы
    «прожектором», который плавно переезжает от шага к шагу, а анимированная
    рука показывает, куда нажимать. Листается кнопками, стрелками ← → и Esc.
@@ -450,12 +450,16 @@
     }
   });
 
-  if (!A.storage(KEY)) {
-    setTimeout(() => {
+  // Если идёт 3D-пролёт, приглашение ждёт его окончания
+  const offerInvite = () => setTimeout(() => {
       if (active || A.storage(KEY) || document.documentElement.classList.contains('has-sheet')) return;
       invite.hidden = false;
       requestAnimationFrame(() => requestAnimationFrame(() => invite.classList.add('is-on')));
     }, 1400);
+  if (!A.storage(KEY) && document.documentElement.classList.contains('has-intro')) {
+    document.addEventListener('bpc:intro-end', offerInvite, { once: true });
+  } else if (!A.storage(KEY)) {
+    offerInvite();
   }
 
   /* ---------- Кнопки запуска ---------- */

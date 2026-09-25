@@ -10,9 +10,8 @@
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
   <!-- Настройки и вкладка применяются до отрисовки: без вспышки темы и чужой вкладки -->
   <script src="js/boot.js"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <!-- Шрифты Google подключает boot.js, если это не запрещено в «Приватности» -->
+  <meta name="referrer" content="no-referrer" />
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
@@ -74,7 +73,7 @@
     <section class="tabpanel" id="home" role="tabpanel" aria-labelledby="tab-home" tabindex="-1">
       <div class="hero">
         <div class="hero__text">
-          <p class="hero__meta"><span data-version>Alpha 0.5.1</span> · данные на <span data-updated></span></p>
+          <p class="hero__meta"><span data-version>Alpha 0.6</span> · данные на <span data-updated></span></p>
           <h1 class="hero__title">Политический компас Беларуси</h1>
           <p class="hero__lead">
             Где находятся 14 белорусских партий по четырём главным линиям спора:
@@ -131,6 +130,18 @@
 
         <div class="hero__strip" id="heroStrip"></div>
         <p class="simple hero__wide">Парламент — собрание депутатов, которые принимают законы. Цветные полоски показывают, сколько мест у каждой партии. Серая — у беспартийных: эти депутаты не состоят ни в одной партии.</p>
+
+        <aside class="promo glass" aria-labelledby="promoTitle">
+          <span class="promo__tag">Другой проект автора</span>
+          <div class="promo__art" aria-hidden="true">
+            <svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="28" fill="none" stroke="currentColor" stroke-width="2" opacity=".3"/><path d="M4 32h56M32 4v56" stroke="currentColor" stroke-width="1.2" opacity=".35"/><circle cx="20" cy="18" r="5" fill="#3a64a0"/><circle cx="40" cy="24" r="3.5" fill="#a8322d"/><circle cx="26" cy="40" r="3" fill="#b8862b"/><circle cx="44" cy="44" r="2.5" fill="#2c6b38"/></svg>
+          </div>
+          <div class="promo__body">
+            <h2 class="promo__title" id="promoTitle">RuPolitCompass</h2>
+            <p>Такой же политический компас, но для партий России. Сравните, как устроены партийные системы двух стран.</p>
+          </div>
+          <a class="btn btn--ghost promo__btn" href="https://rupolitcompass.website/" target="_blank" rel="noopener noreferrer">Открыть RuPolitCompass <span aria-hidden="true">↗</span><span class="sr-only"> (откроется в новой вкладке)</span></a>
+        </aside>
       </div>
     </section>
 
@@ -617,6 +628,10 @@
               <h3>Версии</h3>
               <ol class="versions">
                 <li class="is-current">
+                  <b>Alpha 0.6</b>
+                  <span>Дизайн-язык Sand-Blasted Glass, 3D-пролёт над компасом при первом заходе, раздел «Приватность» в настройках, четыре новых секрета, блок RuPolitCompass. Подготовка к бете: форма «Не согласны с оценкой?» у каждой партии.</span>
+                </li>
+                <li>
                   <b>Alpha 0.5.1</b>
                   <span>Профили специальных возможностей снова выключаются, сброс возвращает всё, что они поменяли. Тёплая палитра, мягче тёмная тема, спокойнее шапка и подсказки.</span>
                 </li>
@@ -641,8 +656,8 @@
                   <span>Компас с четырьмя осями, 14 партий, карточки, аналитика, хронология.</span>
                 </li>
                 <li class="is-next">
-                  <b>Дальше</b>
-                  <span>Белорусскоязычная версия, короткий тест, история позиций партий по годам.</span>
+                  <b>Дальше: Beta 0.9</b>
+                  <span>Заморозка функций, проверка данных с источниками для каждой оценки, открытое тестирование и отзывы. Затем — белорусскоязычная версия, короткий тест и история позиций по годам.</span>
                 </li>
               </ol>
             </article>
@@ -658,7 +673,7 @@
             </article>
             <article class="about__card glass reveal" id="cite" data-num="14">
               <h3>Как цитировать</h3>
-              <p class="cite" id="citeText">BelPolitCompass — политический компас Беларуси, <span data-version>Alpha 0.5.1</span>, данные на <span data-updated></span>.<br />https://github.com/Arbuzyakaby/BelPolitCompass</p>
+              <p class="cite" id="citeText">BelPolitCompass — политический компас Беларуси, <span data-version>Alpha 0.6</span>, данные на <span data-updated></span>.<br />https://arbuzyakaby.github.io/BelPolitCompass</p>
               <button class="btn btn--ghost btn--sm" type="button" id="citeCopy">Скопировать</button>
               <span class="cite__msg" id="citeMsg" role="status"></span>
             </article>
@@ -696,7 +711,7 @@
         </a>
         <p class="footer__tag">Карта белорусской политики — без лозунгов, в четырёх измерениях.</p>
         <div class="footer__badges">
-          <a class="pill pill--version" data-version href="https://github.com/Arbuzyakaby/BelPolitCompass/blob/HEAD/CHANGELOG.md" target="_blank" rel="noopener" title="Что нового в этой версии">Alpha 0.5.1</a>
+          <a class="pill pill--version" data-version href="https://github.com/Arbuzyakaby/BelPolitCompass/blob/HEAD/CHANGELOG.md" target="_blank" rel="noopener" title="Что нового в этой версии">Alpha 0.6</a>
         </div>
         <p class="footer__updated">Данные на <span data-updated></span></p>
       </div>
@@ -728,6 +743,7 @@
         <a href="#about">О проекте</a>
         <a href="#cite">Как цитировать</a>
         <a href="https://github.com/Arbuzyakaby/BelPolitCompass" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://rupolitcompass.website/" target="_blank" rel="noopener noreferrer">RuPolitCompass — компас России</a>
         <a href="https://github.com/Arbuzyakaby/BelPolitCompass/blob/HEAD/CHANGELOG.md" target="_blank" rel="noopener">Список изменений</a>
         <a href="https://github.com/Arbuzyakaby/BelPolitCompass/issues" target="_blank" rel="noopener">Сообщить об ошибке</a>
       </div>
@@ -754,6 +770,7 @@
       <div class="sheet__tabs" role="tablist" aria-label="Разделы настроек" id="sheetTabs">
         <button class="sheet__tab" type="button" role="tab" id="stab-main" aria-controls="spane-main" aria-selected="true">Основные</button>
         <button class="sheet__tab" type="button" role="tab" id="stab-a11y" aria-controls="spane-a11y" aria-selected="false" tabindex="-1">Спецвозможности</button>
+        <button class="sheet__tab" type="button" role="tab" id="stab-privacy" aria-controls="spane-privacy" aria-selected="false" tabindex="-1">Приватность</button>
         <button class="sheet__tab" type="button" role="tab" id="stab-data" aria-controls="spane-data" aria-selected="false" tabindex="-1">Данные</button>
       </div>
 
@@ -804,6 +821,10 @@
               <label class="opt"><input type="radio" name="motion" value="reduced" /><span><b>Сокращённые</b><small>Только короткие переходы — без появления блоков и пульсации</small></span></label>
               <label class="opt"><input type="radio" name="motion" value="off" /><span><b>Выключены</b><small>Всё меняется мгновенно</small></span></label>
             </fieldset>
+            <label class="set-toggle">
+              <span><b>3D-пролёт при первом заходе</b><small>Короткий облёт компаса при первом открытии сайта. Показывается один раз и только при полных анимациях.</small></span>
+              <span class="switch"><input type="checkbox" name="intro" /><span class="switch__track"></span></span>
+            </label>
           </section>
         </div>
 
@@ -899,6 +920,45 @@
           </section>
         </div>
 
+        <!-- ── Приватность ── -->
+        <div class="spane" id="spane-privacy" role="tabpanel" aria-labelledby="stab-privacy" tabindex="0" hidden>
+          <section class="set-group" aria-labelledby="setPrivFacts">
+            <h3 id="setPrivFacts">Что сайт знает о вас</h3>
+            <ul class="privacy-facts">
+              <li><b>Ничего не отправляет.</b> Нет cookies, счётчиков посещений, аналитики и рекламных трекеров.</li>
+              <li><b>Нет сервера с данными.</b> Сайт — набор файлов на GitHub Pages. Как любой хостинг, GitHub видит технические данные запроса (например, IP-адрес), но сайт их не получает и не хранит.</li>
+              <li><b>Всё остаётся в браузере.</b> Ответы теста и настройки лежат только в хранилище этого браузера (localStorage).</li>
+              <li><b>Реклама без слежки.</b> Блок RuPolitCompass — обычная ссылка: без картинок с чужих серверов и без передачи адреса страницы.</li>
+            </ul>
+          </section>
+
+          <section class="set-group" aria-labelledby="setPrivRemember">
+            <h3 id="setPrivRemember">Что запоминать</h3>
+            <label class="set-toggle">
+              <span><b>Ответы теста</b><small>Можно закрыть сайт и продолжить позже. Если выключить, ответы удалятся из браузера и будут жить только до закрытия вкладки.</small></span>
+              <span class="switch"><input type="checkbox" name="rememberQuiz" /><span class="switch__track"></span></span>
+            </label>
+            <label class="set-toggle">
+              <span><b>Выбранные оси компаса</b><small>При следующем визите компас откроется с теми же осями.</small></span>
+              <span class="switch"><input type="checkbox" name="rememberAxes" /><span class="switch__track"></span></span>
+            </label>
+          </section>
+
+          <section class="set-group" aria-labelledby="setPrivNet">
+            <h3 id="setPrivNet">Внешние запросы</h3>
+            <label class="set-toggle">
+              <span><b>Шрифты IBM Plex с Google Fonts</b><small>Единственное обращение сайта к чужому серверу. Если выключить, сайт возьмёт шрифты вашей системы и не будет обращаться к Google.</small></span>
+              <span class="switch"><input type="checkbox" name="webFonts" /><span class="switch__track"></span></span>
+            </label>
+          </section>
+
+          <section class="set-group" aria-labelledby="setPrivNow">
+            <h3 id="setPrivNow">Сейчас в этом браузере</h3>
+            <ul class="privacy-list" id="privacyList"></ul>
+            <button class="text-btn" type="button" data-settings-open="data">Удалить данные — вкладка «Данные»</button>
+          </section>
+        </div>
+
         <!-- ── Данные ── -->
         <div class="spane" id="spane-data" role="tabpanel" aria-labelledby="stab-data" tabindex="0" hidden>
           <section class="set-group" aria-labelledby="setData">
@@ -906,6 +966,7 @@
             <p class="set-note" id="dataStatus"></p>
             <div class="set-actions">
               <button class="btn btn--ghost btn--sm" type="button" data-set="tour">Показать тур ещё раз</button>
+              <button class="btn btn--ghost btn--sm" type="button" data-set="intro">Показать 3D-пролёт</button>
               <button class="btn btn--ghost btn--sm" type="button" data-set="quiz">Удалить ответы теста</button>
               <button class="btn btn--ghost btn--sm" type="button" data-set="axes">Вернуть оси по умолчанию</button>
               <button class="btn btn--ghost btn--sm" type="button" data-set="prefs">Сбросить все настройки</button>
@@ -934,6 +995,7 @@
   <script src="js/settings.js"></script>
   <script src="js/a11y.js"></script>
   <script src="js/toc.js"></script>
+  <script src="js/intro.js"></script>
   <script src="js/tour.js"></script>
   <script src="js/fun.js"></script>
 </body>

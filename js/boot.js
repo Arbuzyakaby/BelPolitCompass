@@ -1,5 +1,5 @@
 /* ==========================================================================
-   BelPolitCompass · Alpha 0.5.1 — загрузка до отрисовки
+   BelPolitCompass · Alpha 0.6 — загрузка до отрисовки
    Подключается в <head> синхронно: читает сохранённые настройки и адрес
    страницы и сразу выставляет атрибуты на <html>, чтобы не было вспышки
    темы, «прыжка» текста и мелькания чужой вкладки.
@@ -41,12 +41,24 @@
     focus: { bool: true, def: false },
     autoNext: { bool: true, def: true },
     tables: { bool: true, def: false },
+    // Приватность
+    rememberQuiz: { bool: true, def: true },
+    rememberAxes: { bool: true, def: true },
+    webFonts: { bool: true, def: true },
+    // Первый визит: 3D-пролёт над компасом
+    intro: { bool: true, def: true },
   };
 
   const DEFAULTS = Object.freeze(Object.fromEntries(Object.entries(SCHEMA).map(([k, s]) => [k, s.def])));
 
   // Поля раздела «Специальные возможности» — их сбрасывает отдельная кнопка
   const A11Y_KEYS = ['contrast', 'font', 'spacing', 'underline', 'cursor', 'cvd', 'guide', 'tts', 'ttsRate', 'targets', 'focus', 'autoNext', 'tables'];
+  // Поля раздела «Приватность»
+  const PRIVACY_KEYS = ['rememberQuiz', 'rememberAxes', 'webFonts'];
+
+  /* Внешние шрифты — единственный запрос сайта к чужому серверу (Google Fonts).
+     Их подключает boot.js, только если это разрешено в настройках. */
+  const FONTS_URL = 'https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap';
 
   /* Готовые профили: набор настроек под конкретную потребность.
      Профиль меняет только перечисленные поля, остальное не трогает. */
@@ -230,6 +242,22 @@
     const reduce = !!(win.matchMedia && win.matchMedia('(prefers-reduced-motion: reduce)').matches);
     applyAttrs(r, toAttrs(prefs, reduce));
     r.setAttribute('data-tab', tabFromHash(win.location && win.location.hash));
+    if (prefs.webFonts) loadFonts(win.document);
+  }
+
+  function loadFonts(doc) {
+    // Шрифты — украшение: любая ошибка здесь не должна мешать загрузке страницы
+    const head = doc && doc.head;
+    if (!head || typeof doc.createElement !== 'function' || doc.getElementById('bpcFonts')) return;
+    const add = (attrs) => {
+      const l = doc.createElement('link');
+      Object.entries(attrs).forEach(([k, v]) => l.setAttribute(k, v));
+      head.appendChild(l);
+      return l;
+    };
+    add({ rel: 'preconnect', href: 'https://fonts.googleapis.com' });
+    add({ rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' });
+    add({ rel: 'stylesheet', href: FONTS_URL, id: 'bpcFonts' });
   }
 
   return {
@@ -238,6 +266,9 @@
     SCHEMA,
     DEFAULTS,
     A11Y_KEYS,
+    PRIVACY_KEYS,
+    FONTS_URL,
+    loadFonts,
     PRESETS,
     TABS,
     ANCHORS,

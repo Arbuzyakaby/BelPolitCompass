@@ -1,0 +1,42 @@
+name: Не согласен с позицией партии
+description: Оспорить координату партии на одной из осей
+title: "Позиция: "
+labels: ["позиция партии", "бета"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Спасибо! Позиции партий — экспертная оценка, и обоснованная критика делает её точнее.
+        Самое ценное — **источник**: программа, заявление, голосование, интервью.
+  - type: input
+    id: party
+    attributes:
+      label: Партия
+      placeholder: "Например: Либерально-демократическая партия Беларуси"
+    validations:
+      required: true
+  - type: dropdown
+    id: axis
+    attributes:
+      label: Ось
+      options:
+        - Геополитический вектор (Восток ↔ Запад)
+        - Модель власти (Горизонталь ↔ Вертикаль)
+        - Экономическая модель (Госсектор ↔ Рынок)
+        - Идентичность (Советская ↔ Национальная)
+        - Несколько осей
+    validations:
+      required: true
+  - type: input
+    id: proposal
+    attributes:
+      label: Какая координата кажется вам верной?
+      description: От −10 до +10. Сейчас значение видно в карточке партии.
+      placeholder: "Например: −5 вместо −8"
+  - type: textarea
+    id: why
+    attributes:
+      label: Почему
+      description: Приведите факты и, если можно, ссылки на источники.
+    validations:
+      required: true
