@@ -1,14 +1,15 @@
 /* ==========================================================================
-   BelPolitCompass · Alpha 0.3 — настройки
-   Внешний вид (тема, размер текста, контрастность, подсказки), анимации,
-   данные и тур. Всё хранится только в браузере, в ключе bpc-settings.
-   Атрибуты на <html> заранее выставляет скрипт в <head>, здесь — изменение
-   на лету и панель настроек.
+   BelPolitCompass · Alpha 0.5 — настройки
+   Три вкладки: «Основные» (упрощённый режим, тема, текст, анимации),
+   «Спецвозможности» (профили, зрение, чтение, управление) и «Данные».
+   Схема и проверка значений — в boot.js; всё хранится только в браузере.
    ========================================================================== */
 (function () {
   'use strict';
 
   const A = window.BPCApp;
+  const B = window.BPCBoot;
+  const T = window.BPCTabs;
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
   const root = document.documentElement;
@@ -16,59 +17,44 @@
   const form = $('#settingsForm');
   if (!sheet || !form) return;
 
-  const KEY = 'bpc-settings';
-  const DEFAULTS = { theme: 'system', fs: 'md', contrast: false, hints: true, motion: 'system' };
   const mqReduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const mqDark = window.matchMedia('(prefers-color-scheme: dark)');
+  const ttsSupported = 'speechSynthesis' in window && typeof window.SpeechSynthesisUtterance === 'function';
 
   /* ---------- Состояние ---------- */
-  function load() {
-    let s = {};
-    try {
-      s = JSON.parse(A.storage(KEY) || '{}') || {};
-    } catch (e) {
-      s = {};
-    }
-    // Тема из Alpha 0.1–0.2 хранилась отдельно
-    const legacy = A.storage('bpc-theme');
-    if (!s.theme && (legacy === 'light' || legacy === 'dark')) s.theme = legacy;
-    return {
-      theme: ['system', 'light', 'dark'].includes(s.theme) ? s.theme : DEFAULTS.theme,
-      fs: ['md', 'lg', 'xl'].includes(s.fs) ? s.fs : DEFAULTS.fs,
-      contrast: s.contrast === 'high' || s.contrast === true,
-      hints: s.hints !== false,
-      motion: ['system', 'full', 'reduced', 'off'].includes(s.motion) ? s.motion : DEFAULTS.motion,
-    };
-  }
-
+  const load = () => B.parse(A.storage(B.KEY), A.storage(B.LEGACY_THEME_KEY));
   let prefs = load();
 
   function save() {
-    A.storage(KEY, JSON.stringify({ ...prefs, contrast: prefs.contrast ? 'high' : 'normal' }));
-    A.storage('bpc-theme', null);
-  }
-
-  const effectiveMotion = () => (prefs.motion === 'system' ? (mqReduce.matches ? 'off' : 'full') : prefs.motion);
-
-  function setAttr(name, value) {
-    if (value === null) root.removeAttribute(name);
-    else root.setAttribute(name, value);
+    A.storage(B.KEY, B.serialize(prefs));
+    A.storage(B.LEGACY_THEME_KEY, null);
   }
 
   /* ---------- Применение ---------- */
-  function apply(silent) {
+  function apply(changed) {
     const fsBefore = root.getAttribute('data-fs');
-    setAttr('data-theme', prefs.theme === 'system' ? null : prefs.theme);
-    setAttr('data-fs', prefs.fs === 'md' ? null : prefs.fs);
-    setAttr('data-contrast', prefs.contrast ? 'high' : null);
-    setAttr('data-hints', prefs.hints ? null : 'off');
-    setAttr('data-motion', effectiveMotion());
+    const fontBefore = root.getAttribute('data-font') + '|' + root.getAttribute('data-spacing');
+    B.applyAttrs(root, B.toAttrs(prefs, mqReduce.matches));
     syncThemeColor();
-    if (silent) return;
-    document.dispatchEvent(new CustomEvent('bpc:settings', { detail: { ...prefs } }));
-    // Размер текста меняет ширину элементов: пересчитываем «глайдеры» и компас
-    if (fsBefore !== root.getAttribute('data-fs')) {
+    syncSimpleButtons();
+    if (!changed) return;
+    document.dispatchEvent(new CustomEvent('bpc:settings', { detail: { prefs: { ...prefs }, changed } }));
+    // Размер текста и шрифт меняют ширину элементов: пересчитываем «глайдеры» и компас
+    if (fsBefore !== root.getAttribute('data-fs') || fontBefore !== root.getAttribute('data-font') + '|' + root.getAttribute('data-spacing')) {
       requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
     }
+  }
+
+  function set(patch, silentMsg) {
+    const before = { ...prefs };
+    prefs = B.normalize({ ...prefs, ...patch });
+    const changed = Object.keys(prefs).filter((k) => prefs[k] !== before[k]);
+    apply(changed);
+    save();
+    syncForm();
+    updateStatus();
+    if (!silentMsg && changed.includes('simple')) announce(prefs.simple ? 'Упрощённый режим включён' : 'Упрощённый режим выключен');
+    return changed;
   }
 
   // Цвет адресной строки на телефонах следует за выбранной темой. Берём токен
@@ -81,20 +67,57 @@
     });
   }
 
-  mqReduce.addEventListener &&
-    mqReduce.addEventListener('change', () => {
-      if (prefs.motion === 'system') apply();
-      paintMotionHint();
+  const onReduceChange = () => {
+    if (prefs.motion === 'system') apply(['motion']);
+    paintMotionHint();
+  };
+  if (mqReduce.addEventListener) mqReduce.addEventListener('change', onReduceChange);
+
+  // Тема «Как в системе» перекрашивается средствами CSS; здесь только подпись
+  // о том, что сейчас выбрано в системе, — она меняется на лету вместе с ОС
+  function paintThemeHint() {
+    const el = $('#themeSys');
+    if (!el) return;
+    const sys = mqDark.matches ? 'тёмная' : 'светлая';
+    el.textContent =
+      prefs.theme === 'system'
+        ? `Сейчас в системе ${sys} тема — сайт следует за ней и переключится сам`
+        : `В системе сейчас ${sys} тема, но выбрана ${prefs.theme === 'dark' ? 'тёмная' : 'светлая'} — она важнее`;
+  }
+  const onDarkChange = () => {
+    paintThemeHint();
+    syncThemeColor();
+  };
+  if (mqDark.addEventListener) mqDark.addEventListener('change', onDarkChange);
+  else if (mqDark.addListener) mqDark.addListener(onDarkChange);
+
+  /* ---------- Упрощённый режим: кнопки на странице ---------- */
+  function syncSimpleButtons() {
+    $$('[data-simple-toggle]').forEach((b) => {
+      b.setAttribute('aria-pressed', String(prefs.simple));
+      if (b.closest('.easy-offer')) b.textContent = prefs.simple ? 'Выключить' : 'Включить';
     });
+    const offer = $('#easyOffer');
+    if (offer) offer.classList.toggle('is-on', prefs.simple);
+  }
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-simple-toggle]');
+    if (b) set({ simple: !prefs.simple });
+  });
 
   /* ---------- Форма ---------- */
   function syncForm() {
-    form.elements.theme.value = prefs.theme;
-    form.elements.fs.value = prefs.fs;
-    form.elements.motion.value = prefs.motion;
-    form.elements.contrast.checked = prefs.contrast;
-    form.elements.hints.checked = prefs.hints;
+    Array.from(form.elements).forEach((el) => {
+      if (!el.name || !(el.name in prefs)) return;
+      const v = prefs[el.name];
+      if (el.type === 'radio') el.checked = el.value === v;
+      else if (el.type === 'checkbox') el.checked = el.dataset.off ? v === el.value : !!v;
+    });
     paintMotionHint();
+    paintThemeHint();
+    paintPresets();
+    const rateRow = $('#ttsRateRow');
+    if (rateRow) rateRow.disabled = !prefs.tts;
   }
 
   function paintMotionHint() {
@@ -105,12 +128,75 @@
 
   form.addEventListener('change', (e) => {
     const el = e.target;
-    if (!el.name) return;
-    if (el.type === 'checkbox') prefs[el.name] = el.checked;
-    else prefs[el.name] = el.value;
-    apply();
-    save();
-    updateStatus();
+    if (!el.name || !(el.name in prefs)) return;
+    let v;
+    if (el.type === 'checkbox') v = el.dataset.off ? (el.checked ? el.value : el.dataset.off) : el.checked;
+    else v = el.value;
+    set({ [el.name]: v });
+  });
+
+  // Озвучивание недоступно в этом браузере — честно говорим об этом
+  if (!ttsSupported) {
+    const cb = form.elements.tts;
+    if (cb) {
+      cb.disabled = true;
+      cb.closest('.set-toggle').classList.add('is-disabled');
+    }
+    const note = $('#ttsNote');
+    if (note) note.textContent = 'Этот браузер не умеет читать текст вслух. Попробуйте Chrome, Edge или Safari.';
+  }
+
+  /* ---------- Профили специальных возможностей ---------- */
+  const presetsBox = $('#presets');
+  if (presetsBox) {
+    presetsBox.innerHTML = Object.entries(B.PRESETS)
+      .map(
+        ([id, p]) =>
+          `<button class="preset" type="button" data-preset="${id}" aria-pressed="false"><b>${p.label}</b><small>${p.note}</small></button>`
+      )
+      .join('');
+    presetsBox.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-preset]');
+      if (!b) return;
+      const preset = B.PRESETS[b.dataset.preset];
+      set(preset.set, true);
+      say(`Профиль «${preset.label}» включён. Любую настройку можно поменять ниже.`);
+    });
+  }
+
+  function paintPresets() {
+    $$('[data-preset]').forEach((b) => {
+      const s = B.PRESETS[b.dataset.preset].set;
+      const on = Object.keys(s).every((k) => prefs[k] === s[k]);
+      b.setAttribute('aria-pressed', String(on));
+      b.classList.toggle('is-on', on);
+    });
+  }
+
+  /* ---------- Вкладки панели ---------- */
+  const sTabs = $$('.sheet__tab', sheet);
+  function showPane(name, focusTab) {
+    sTabs.forEach((t) => {
+      const on = t.id === 'stab-' + name;
+      t.setAttribute('aria-selected', String(on));
+      t.tabIndex = on ? 0 : -1;
+      $('#' + t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focusTab) t.focus();
+    });
+    $('#sheetBody').scrollTop = 0;
+  }
+  sTabs.forEach((t) => t.addEventListener('click', () => showPane(t.id.replace('stab-', ''))));
+  $('#sheetTabs').addEventListener('keydown', (e) => {
+    const i = sTabs.indexOf(document.activeElement);
+    if (i < 0) return;
+    let n = null;
+    if (e.key === 'ArrowRight') n = (i + 1) % sTabs.length;
+    else if (e.key === 'ArrowLeft') n = (i - 1 + sTabs.length) % sTabs.length;
+    else if (e.key === 'Home') n = 0;
+    else if (e.key === 'End') n = sTabs.length - 1;
+    if (n === null) return;
+    e.preventDefault();
+    showPane(sTabs[n].id.replace('stab-', ''), true);
   });
 
   /* ---------- Данные ---------- */
@@ -121,6 +207,7 @@
     clearTimeout(msgTimer);
     msgTimer = setTimeout(() => (msg.textContent = ''), 5000);
   }
+  const announce = (text) => (T ? T.announce(text) : say(text));
 
   function updateStatus() {
     const parts = [];
@@ -128,8 +215,9 @@
     if (q && q.done) parts.push('результат теста');
     else if (q && q.answered) parts.push(`ответы теста (${q.answered} из ${q.total})`);
     if (A.storage('bpc-ax') || A.storage('bpc-ay')) parts.push('выбранные оси компаса');
-    if (A.storage(KEY)) parts.push('настройки');
+    if (A.storage(B.KEY) && A.storage(B.KEY) !== '{}') parts.push('настройки');
     if (A.storage('bpc-tour')) parts.push('отметка о туре');
+    if (window.BPCFun && window.BPCFun.found().length) parts.push('найденные секреты');
     $('#dataStatus').textContent = parts.length
       ? `В этом браузере сохранено: ${parts.join(', ')}.`
       : 'В этом браузере пока ничего не сохранено.';
@@ -169,19 +257,20 @@
       setTimeout(() => window.BPCTour && window.BPCTour.start(), A.reduced ? 0 : 280);
     } else if (act === 'quiz') {
       if (!confirmFirst(btn, 'Нажмите ещё раз, чтобы удалить')) return;
-      window.BPCQuiz && window.BPCQuiz.clear();
+      if (window.BPCQuiz) window.BPCQuiz.clear();
       say('Ответы теста удалены.');
     } else if (act === 'axes') {
       A.resetAxes();
       A.storage('bpc-ax', null);
       A.storage('bpc-ay', null);
       say('На компасе снова «Геополитический вектор» × «Модель власти».');
+    } else if (act === 'a11y') {
+      set(B.resetA11y(prefs), true);
+      say('Специальные возможности сброшены.');
     } else if (act === 'prefs') {
-      prefs = { ...DEFAULTS };
-      apply();
-      A.storage(KEY, null);
-      syncForm();
-      say('Настройки сброшены.');
+      set({ ...B.DEFAULTS }, true);
+      A.storage(B.KEY, null);
+      say('Все настройки сброшены.');
     } else if (act === 'all') {
       if (!confirmFirst(btn, 'Нажмите ещё раз — удалить всё')) return;
       try {
@@ -200,16 +289,19 @@
   /* ---------- Открытие и закрытие ---------- */
   let opener = null;
 
-  function open() {
-    if (sheet.open) return;
-    opener = document.activeElement;
-    syncForm();
-    updateStatus();
-    msg.textContent = '';
-    if (typeof sheet.showModal === 'function') sheet.showModal();
-    else sheet.setAttribute('open', '');
-    sheet.classList.remove('is-closing');
-    document.documentElement.classList.add('has-sheet');
+  function open(pane) {
+    if (window.BPCTour && root.classList.contains('has-tour')) window.BPCTour.end();
+    if (!sheet.open) {
+      opener = document.activeElement;
+      syncForm();
+      updateStatus();
+      msg.textContent = '';
+      if (typeof sheet.showModal === 'function') sheet.showModal();
+      else sheet.setAttribute('open', '');
+      sheet.classList.remove('is-closing');
+      root.classList.add('has-sheet');
+    }
+    showPane(pane === 'a11y' || pane === 'data' ? pane : 'main', true);
   }
 
   function finishClose() {
@@ -218,7 +310,7 @@
       if (typeof sheet.close === 'function') sheet.close();
       else sheet.removeAttribute('open');
     }
-    document.documentElement.classList.remove('has-sheet');
+    root.classList.remove('has-sheet');
     if (opener && opener.focus) opener.focus({ preventScroll: true });
   }
 
@@ -243,11 +335,20 @@
     if (e.target === sheet) close();
   });
 
-  $('#settingsBtn').addEventListener('click', open);
   document.addEventListener('click', (e) => {
-    if (e.target.closest('[data-settings-open]')) open();
+    const b = e.target.closest('[data-settings-open]');
+    if (b) open(b.dataset.settingsOpen);
   });
 
-  apply(true);
-  window.BPCSettings = { open, close };
+  apply(null);
+  syncForm();
+  window.BPCSettings = {
+    open,
+    close,
+    set,
+    get prefs() {
+      return { ...prefs };
+    },
+    ttsSupported,
+  };
 })();
